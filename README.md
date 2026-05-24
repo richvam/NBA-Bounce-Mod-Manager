@@ -281,3 +281,9 @@ MIT — do whatever you want with it.
 ## 🙏 Credits
 
 Built with [UnityPy](https://github.com/K0lb3/UnityPy) by K0lb3 — the only Python library that makes Unity asset editing possible.
+
+---
+
+## 🤖 Development
+
+Co-developed with [Claude](https://claude.ai) by Anthropic. The core Unity texture patching logic was built and debugged iteratively through AI-assisted development.
