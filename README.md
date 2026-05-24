@@ -32,14 +32,6 @@
 
 ---
 
-## 📸 Screenshot
-
-> *Dark Mode — Arena Night*
-
-![App Screenshot](screenshot.png)
-
----
-
 ## 🚀 Getting Started
 
 ### Requirements
@@ -72,7 +64,7 @@ If auto-detect doesn't find the game, click **⚙ Settings** and set:
 
 | Setting | What to enter |
 |---|---|
-| **Game Data Folder** | The `NBA Bounce_Data` folder inside your Steam install<br>e.g. `I:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data\` |
+| **Game Data Folder** | The `NBA Bounce_Data` folder inside your Steam install<br>e.g. `C:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data\` |
 | **Mods Folder** | Any folder where you want your replacement PNGs stored<br>e.g. `C:\Users\You\Documents\NBABounceMods` |
 
 Click **Save & Reload** and the texture list will populate.
