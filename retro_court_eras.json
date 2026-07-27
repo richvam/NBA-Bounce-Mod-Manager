@@ -1,0 +1,927 @@
+{
+  "_note": "Maps each BasketTeamContainer court variant to the real-world NBA era it represents. Edit 'label'/'years' freely - the app reads this file at startup and nothing else depends on the wording. 'confidence' is only shown as a hint in the UI for entries that are inferred rather than evidenced.",
+  "_confidence_legend": {
+    "high": "Variant's baked court colors are unmistakably that era's palette.",
+    "medium": "Colors are suggestive and consistent with that era.",
+    "low": "Variant colors match the modern court, so the era comes from logo history alone. Worth confirming visually."
+  },
+  "_default_label": "Modern (default court)",
+  "teams": {
+    "01_Boston Celtics": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#008348",
+        "_Color_Outside_Court_R": "#008348",
+        "_Color_Area_G": "#008348",
+        "_Color_Floor_Court_B": "#001A0E"
+      },
+      "_texture_token": "BostonCeltics",
+      "LOGO_4_TEAM_1": {
+        "label": "Boston Garden Classic",
+        "years": "1976-1996",
+        "confidence": "low",
+        "evidence": "Celtics never changed colors; retro variant is identical green #008348 to modern.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        },
+        "court_texture": "txt_bounce_court_BostonCeltics_D_retroLogo_4_team_1",
+        "signage_texture": "txt_bounce_publi_BostonCeltics_D_retroLogo_4_team_1"
+      },
+      "LOGO_5_TEAM_1": {
+        "label": "Original Leprechaun",
+        "years": "1950-1968",
+        "confidence": "low",
+        "evidence": "Identical green #008348 to modern - era inferred from logo history only.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        },
+        "court_texture": "txt_bounce_court_BostonCeltics_D_retroLogo_5_team_1",
+        "signage_texture": "txt_bounce_publi_BostonCeltics_D_retroLogo_5_team_1"
+      }
+    },
+    "03_New York Knicks": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1D428A",
+        "_Color_Outside_Court_R": "#F58426",
+        "_Color_Area_G": "#1D428A",
+        "_Color_Floor_Court_B": "#10254D"
+      },
+      "_texture_token": "NewYorkKnicks",
+      "LOGO_4_TEAM_3": {
+        "label": "Knickerbockers Roundel",
+        "years": "1964-1983",
+        "confidence": "medium",
+        "evidence": "Apron and key drop to pure blue #005FAB with no orange - matches the all-blue roundel era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1D428A",
+          "_Color_Outside_Court_R": "#005FAB",
+          "_Color_Area_G": "#005FAB",
+          "_Color_Floor_Court_B": "#10254D"
+        },
+        "court_texture": "txt_bounce_court_NewYorkKnicks_D_retroLogo_4_team_3",
+        "signage_texture": "txt_bounce_publi_NewYorkKnicks_D_retroLogo_4_team_3"
+      },
+      "LOGO_5_TEAM_3": {
+        "label": "Classic Blue & Orange",
+        "years": "1992-2011",
+        "confidence": "medium",
+        "evidence": "Orange apron #F58426 identical to modern - the long-running classic roundel.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1D428A",
+          "_Color_Outside_Court_R": "#F58426",
+          "_Color_Area_G": "#1D428A",
+          "_Color_Floor_Court_B": "#10254D"
+        },
+        "court_texture": "txt_bounce_court_NewYorkKnicks_D_retroLogo_5_team_3",
+        "signage_texture": "txt_bounce_publi_NewYorkKnicks_D_retroLogo_5_team_3"
+      }
+    },
+    "04_Philadelphia 76ers": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#C8102E",
+        "_Color_Outside_Court_R": "#1D428A",
+        "_Color_Area_G": "#1D428A",
+        "_Color_Floor_Court_B": "#0B1833"
+      },
+      "_texture_token": "Philadelphia76ers",
+      "LOGO_4_TEAM_4": {
+        "label": "Black & Gold Era",
+        "years": "1997-2009",
+        "confidence": "medium",
+        "evidence": "Near-black floor #0C181C with blue key #0061AE - matches the black-uniform rebrand.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#C8102E",
+          "_Color_Outside_Court_R": "#0C181C",
+          "_Color_Area_G": "#0061AE",
+          "_Color_Floor_Court_B": "#0C181C"
+        },
+        "court_texture": "txt_bounce_court_Philadelphia76ers_D_retroLogo_4_team_4",
+        "signage_texture": "txt_bounce_publi_Philadelphia76ers_D_retroLogo_4_team_4"
+      },
+      "LOGO_5_TEAM_4": {
+        "label": "Stars & Stripes",
+        "years": "1977-1997",
+        "confidence": "medium",
+        "evidence": "Navy floor with royal blue #014B96 - the classic red/white/blue identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#C8102E",
+          "_Color_Outside_Court_R": "#014B96",
+          "_Color_Area_G": "#014B96",
+          "_Color_Floor_Court_B": "#0B1833"
+        },
+        "court_texture": "txt_bounce_court_Philadelphia76ers_D_retroLogo_5_team_4",
+        "signage_texture": "txt_bounce_publi_Philadelphia76ers_D_retroLogo_5_team_4"
+      }
+    },
+    "05_Toronto Raptors": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#BD1B21",
+        "_Color_Area_G": "#BD1B21",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "TorontoRaptors",
+      "LOGO_4_TEAM_5": {
+        "label": "Purple Dino",
+        "years": "1995-2006",
+        "confidence": "medium",
+        "evidence": "Red #C10431 with indigo #373697 - the original purple/red/black expansion identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#C10431",
+          "_Color_Outside_Court_R": "#373697",
+          "_Color_Area_G": "#373697",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_TorontoRaptors_D_retroLogo_4_team_5",
+        "signage_texture": "txt_bounce_publi_TorontoRaptors_D_retroLogo_4_team_5"
+      },
+      "LOGO_5_TEAM_5": {
+        "label": "Silver & Purple",
+        "years": "2008-2015",
+        "confidence": "low",
+        "evidence": "Silver floor #3F3F3F with purple key #793EBB.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#C10431",
+          "_Color_Outside_Court_R": "#1A1A1A",
+          "_Color_Area_G": "#793EBB",
+          "_Color_Floor_Court_B": "#3F3F3F"
+        },
+        "court_texture": "txt_bounce_court_TorontoRaptors_D_retroLogo_5_team_5",
+        "signage_texture": "txt_bounce_publi_TorontoRaptors_D_retroLogo_5_team_5"
+      }
+    },
+    "06_Chicago Bulls": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#091A22",
+        "_Color_Area_G": "#CE1141",
+        "_Color_Floor_Court_B": "#091A22"
+      },
+      "_texture_token": "ChicagoBulls",
+      "LOGO_4_TEAM_6": {
+        "label": "Chicago Stadium Classic",
+        "years": "1966-1994",
+        "confidence": "low",
+        "evidence": "Red apron #CE1141; Bulls logo/colors are unchanged since 1966, so era is inferred.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#CE1141",
+          "_Color_Area_G": "#CE1141",
+          "_Color_Floor_Court_B": "#091A22"
+        },
+        "court_texture": "txt_bounce_court_ChicagoBulls_D_retroLogo_4_team_6",
+        "signage_texture": "txt_bounce_publi_ChicagoBulls_D_retroLogo_4_team_6"
+      }
+    },
+    "07_Cleveland Cavaliers": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#860036",
+        "_Color_Outside_Court_R": "#262626",
+        "_Color_Area_G": "#860036",
+        "_Color_Floor_Court_B": "#262626"
+      },
+      "_texture_token": "ClevelandCavaliers",
+      "LOGO_4_TEAM_7": {
+        "label": "Blue & Black",
+        "years": "1994-2003",
+        "confidence": "high",
+        "evidence": "Black main #1A1A1A with light blue #4B82C3 - unmistakably the Gund Arena blue/black rebrand.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#4B82C3",
+          "_Color_Area_G": "#4B82C3",
+          "_Color_Floor_Court_B": "#18293F"
+        },
+        "court_texture": "txt_bounce_court_ClevelandCavaliers_D_retroLogo_4_team_7",
+        "signage_texture": "txt_bounce_publi_ClevelandCavaliers_D_retroLogo_4_team_7"
+      },
+      "LOGO_5_TEAM_7": {
+        "label": "Orange & Blue",
+        "years": "1983-1994",
+        "confidence": "high",
+        "evidence": "Orange main #F1491B with navy #013D7D - the classic orange/blue Cavs.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#F1491B",
+          "_Color_Outside_Court_R": "#013D7D",
+          "_Color_Area_G": "#013D7D",
+          "_Color_Floor_Court_B": "#262626"
+        },
+        "court_texture": "txt_bounce_court_ClevelandCavaliers_D_retroLogo_5_team_7",
+        "signage_texture": "txt_bounce_publi_ClevelandCavaliers_D_retroLogo_5_team_7"
+      }
+    },
+    "08_Detroit Pistons": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1D428A",
+        "_Color_Outside_Court_R": "#C8102E",
+        "_Color_Area_G": "#C8102E",
+        "_Color_Floor_Court_B": "#0B1833"
+      },
+      "_texture_token": "DetroitPistons",
+      "LOGO_4_TEAM_8": {
+        "label": "Bad Boys",
+        "years": "1979-1996",
+        "confidence": "high",
+        "evidence": "Blue #0461A5 with red #ED154E - the red/white/blue era that covers the Bad Boys titles.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#0461A5",
+          "_Color_Outside_Court_R": "#ED154E",
+          "_Color_Area_G": "#0168B3",
+          "_Color_Floor_Court_B": "#0B1833"
+        },
+        "court_texture": "txt_bounce_court_DetroitPistons_D_retroLogo_4_team_8",
+        "signage_texture": "txt_bounce_publi_DetroitPistons_D_retroLogo_4_team_8"
+      },
+      "LOGO_5_TEAM_8": {
+        "label": "Teal Horse",
+        "years": "1996-2001",
+        "confidence": "high",
+        "evidence": "Teal #007C8B with red #B71B37 - the teal/black rebrand, unmistakable.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#B71B37",
+          "_Color_Outside_Court_R": "#007C8B",
+          "_Color_Area_G": "#B71B37",
+          "_Color_Floor_Court_B": "#002B30"
+        },
+        "court_texture": "txt_bounce_court_DetroitPistons_D_retroLogo_5_team_8",
+        "signage_texture": "txt_bounce_publi_DetroitPistons_D_retroLogo_5_team_8"
+      }
+    },
+    "09_Indiana Pacers": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#0C2340",
+        "_Color_Outside_Court_R": "#002D62",
+        "_Color_Area_G": "#FFD523",
+        "_Color_Floor_Court_B": "#001226"
+      },
+      "_texture_token": "IndianaPacers",
+      "LOGO_4_TEAM_9": {
+        "label": "ABA Blue & Gold",
+        "years": "1967-1976",
+        "confidence": "medium",
+        "evidence": "Bright blue floor #0B4499 with gold #F5D130 - the ABA-era palette.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#0B4499",
+          "_Color_Outside_Court_R": "#F5D130",
+          "_Color_Area_G": "#0B4499",
+          "_Color_Floor_Court_B": "#0B4499"
+        },
+        "court_texture": "txt_bounce_court_IndianaPacers_D_logoRetro_4_team9",
+        "signage_texture": "txt_bounce_publi_IndianaPacers_D_logoRetro_4_team9"
+      }
+    },
+    "10_Milwaukee Bucks": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#00471B",
+        "_Color_Outside_Court_R": "#00471B",
+        "_Color_Area_G": "#00471B",
+        "_Color_Floor_Court_B": "#001A0A"
+      },
+      "_texture_token": "MilwaukeeBucks",
+      "LOGO_4_TEAM_10": {
+        "label": "Purple & Green",
+        "years": "1993-2006",
+        "confidence": "high",
+        "evidence": "Purple floor #20102B and apron #5D307E over green - the purple/green era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#00471B",
+          "_Color_Outside_Court_R": "#5D307E",
+          "_Color_Area_G": "#00471B",
+          "_Color_Floor_Court_B": "#20102B"
+        },
+        "court_texture": "txt_bounce_court_MilwaukeeBucks_D_retroLogo_4_team_10",
+        "signage_texture": "txt_bounce_publi_MilwaukeeBucks_D_retroLogo_4_team_10"
+      },
+      "LOGO_5_TEAM_10": {
+        "label": "Classic Green (Bango)",
+        "years": "1968-1993",
+        "confidence": "medium",
+        "evidence": "Identical green #00471B to modern - the original green/red identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#00471B",
+          "_Color_Outside_Court_R": "#00471B",
+          "_Color_Area_G": "#00471B",
+          "_Color_Floor_Court_B": "#001A0A"
+        },
+        "court_texture": "txt_bounce_court_MilwaukeeBucks_D_retroLogo_5_team_10",
+        "signage_texture": "txt_bounce_publi_MilwaukeeBucks_D_retroLogo_5_team_10"
+      }
+    },
+    "11_Atlanta Hawks": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#262626",
+        "_Color_Area_G": "#C8102E",
+        "_Color_Floor_Court_B": "#333333"
+      },
+      "_texture_token": "AtlantaHawks",
+      "LOGO_4_TEAM_11": {
+        "label": "Pac-Man Hawks",
+        "years": "1972-1995",
+        "confidence": "high",
+        "evidence": "Red main #DD042C - the red/gold hawk-head era introduced July 1972.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#DD042C",
+          "_Color_Outside_Court_R": "#262626",
+          "_Color_Area_G": "#DD042C",
+          "_Color_Floor_Court_B": "#333333"
+        },
+        "court_texture": "txt_bounce_court_AtlantaHawks_D_retroLogo_4_team_11",
+        "signage_texture": "txt_bounce_publi_AtlantaHawks_D_retroLogo_4_team_11"
+      },
+      "LOGO_5_TEAM_11": {
+        "label": "Mod Green & Blue",
+        "years": "1970-1972",
+        "confidence": "high",
+        "evidence": "Blue #0D489B with lime green #5ABF34 - the short-lived 1970-72 'mod' scheme. Verified.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#0D489B",
+          "_Color_Outside_Court_R": "#5ABF34",
+          "_Color_Area_G": "#0D489B",
+          "_Color_Floor_Court_B": "#031124"
+        },
+        "court_texture": "txt_bounce_court_AtlantaHawks_D_retroLogo_5_team_11",
+        "signage_texture": "txt_bounce_publi_AtlantaHawks_D_retroLogo_5_team_11"
+      }
+    },
+    "12_Charlotte Hornets": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1D1160",
+        "_Color_Outside_Court_R": "#1D1160",
+        "_Color_Area_G": "#00788C",
+        "_Color_Floor_Court_B": "#002C33"
+      },
+      "_texture_token": "CharlotteHornets",
+      "LOGO_4_TEAM_12": {
+        "label": "Original Hornets",
+        "years": "1988-2002",
+        "confidence": "high",
+        "evidence": "Purple #1D1160 with teal #00788C - the original Hugo-era teal/purple.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1D1160",
+          "_Color_Outside_Court_R": "#00788C",
+          "_Color_Area_G": "#00788C",
+          "_Color_Floor_Court_B": "#002C33"
+        },
+        "court_texture": "txt_bounce_court_CharlotteHornets_D_retroLogo_4_team_12",
+        "signage_texture": "txt_bounce_publi_CharlotteHornets_D_retroLogo_4_team_12"
+      }
+    },
+    "13_Miami Heat": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#1A1A1A",
+        "_Color_Area_G": "#98002E",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "MiamiHeat",
+      "LOGO_4_TEAM_13": {
+        "label": "Original Heat",
+        "years": "1988-1999",
+        "confidence": "medium",
+        "evidence": "Deep red main #98002E on black - the original red/black/orange identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#98002E",
+          "_Color_Outside_Court_R": "#1A1A1A",
+          "_Color_Area_G": "#1A1A1A",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_MiamiHeat_D_retroLogo_4_team_13",
+        "signage_texture": "txt_bounce_publi_MiamiHeat_D_retroLogo_4_team_13"
+      },
+      "LOGO_5_TEAM_13": {
+        "label": "Miami Floridians Tribute",
+        "years": "1968-1972",
+        "confidence": "low",
+        "evidence": "Brighter magenta-red #D20D44 - possibly the ABA Floridians throwback the Heat wear.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#D20D44",
+          "_Color_Area_G": "#D20D44",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_MiamiHeat_D_retroLogo_5_team_13",
+        "signage_texture": "txt_bounce_publi_MiamiHeat_D_retroLogo_5_team_13"
+      }
+    },
+    "14_Orlando Magic": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#1A1A1A",
+        "_Color_Area_G": "#0050B5",
+        "_Color_Floor_Court_B": "#00224C"
+      },
+      "_texture_token": "OrlandoMagic",
+      "LOGO_4_TEAM_14": {
+        "label": "Original Magic (Pinstripes)",
+        "years": "1989-2000",
+        "confidence": "high",
+        "evidence": "Blue apron #0050B5 on navy floor #001C3F - the pinstripe expansion identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#0050B5",
+          "_Color_Area_G": "#1A1A1A",
+          "_Color_Floor_Court_B": "#001C3F"
+        },
+        "court_texture": "txt_bounce_court_OrlandoMagic_D_retroLogo_4_team_14",
+        "signage_texture": "txt_bounce_publi_OrlandoMagic_D_retroLogo_4_team_14"
+      }
+    },
+    "16_Denver Nuggets": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#8B2131",
+        "_Color_Outside_Court_R": "#0E2240",
+        "_Color_Area_G": "#FFDA39",
+        "_Color_Floor_Court_B": "#0E2240"
+      },
+      "_texture_token": "DenverNuggets",
+      "LOGO_4_TEAM_16": {
+        "label": "Rainbow Skyline",
+        "years": "1981-1993",
+        "confidence": "medium",
+        "evidence": "Bright red/pink #F1124B over a silver floor #3F3F3F - the multicolor skyline era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#D11042",
+          "_Color_Outside_Court_R": "#F1124B",
+          "_Color_Area_G": "#F1124B",
+          "_Color_Floor_Court_B": "#3F3F3F"
+        },
+        "court_texture": "txt_bounce_court_DenverNuggets_D_retroLogo_4_team_16",
+        "signage_texture": "txt_bounce_publi_DenverNuggets_D_retroLogo_4_team_16"
+      },
+      "LOGO_5_TEAM_16": {
+        "label": "Early Nuggets Blue",
+        "years": "1974-1981",
+        "confidence": "low",
+        "evidence": "Blue #0161AA over a silver floor - the pre-skyline identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#0161AA",
+          "_Color_Outside_Court_R": "#0161AA",
+          "_Color_Area_G": "#0053A1",
+          "_Color_Floor_Court_B": "#3F3F3F"
+        },
+        "court_texture": "txt_bounce_court_DenverNuggets_D_retroLogo_5_team_16",
+        "signage_texture": "txt_bounce_publi_DenverNuggets_D_retroLogo_5_team_16"
+      }
+    },
+    "17_Minnesota Timberwolves": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#0C233F",
+        "_Color_Outside_Court_R": "#0C233F",
+        "_Color_Area_G": "#79BC43",
+        "_Color_Floor_Court_B": "#0C233F"
+      },
+      "_texture_token": "MinnesotaTimberwolves",
+      "LOGO_4_TEAM_17": {
+        "label": "Original Wolves",
+        "years": "1989-1996",
+        "confidence": "high",
+        "evidence": "Blue #1E59AB with green #00A162 on a dark green floor - the original blue/green expansion look.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1E59AB",
+          "_Color_Outside_Court_R": "#00A162",
+          "_Color_Area_G": "#1E59AB",
+          "_Color_Floor_Court_B": "#00331F"
+        },
+        "court_texture": "txt_bounce_court_MinnesotaTimberwolves_D_retroLogo_4_team_17",
+        "signage_texture": "txt_bounce_publi_MinnesotaTimberwolves_D_retroLogo_4_team_17"
+      }
+    },
+    "19_Portland Trail Blazers": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#E03A3E",
+        "_Color_Area_G": "#1A1A1A",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "PortlandTrailBlazers",
+      "LOGO_4_TEAM_19": {
+        "label": "Original Blazers",
+        "years": "1970-1990",
+        "confidence": "low",
+        "evidence": "Red #D0043C; Blazers colors are essentially unchanged, so era is inferred from logo history.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#D0043C",
+          "_Color_Area_G": "#D0043C",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_PortlandTrailBlazers_D_retroLogo_4_team_19",
+        "signage_texture": "txt_bounce_publi_PortlandTrailBlazers_D_retroLogo_4_team_19"
+      },
+      "LOGO_5_TEAM_19": {
+        "label": "Pinwheel Era",
+        "years": "1990-2002",
+        "confidence": "low",
+        "evidence": "Red #DD042B, near-identical to the other retro - era inferred from logo history.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#DD042B",
+          "_Color_Area_G": "#1A1A1A",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_PortlandTrailBlazers_D_retroLogo_5_team_19",
+        "signage_texture": "txt_bounce_publi_PortlandTrailBlazers_D_retroLogo_5_team_19"
+      }
+    },
+    "20_Utah Jazz": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#4E008E",
+        "_Color_Outside_Court_R": "#79A3DC",
+        "_Color_Area_G": "#79A3DC",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "UtahJazz",
+      "LOGO_4_TEAM_20": {
+        "label": "New Orleans Jazz",
+        "years": "1974-1979",
+        "confidence": "high",
+        "evidence": "Green main #006937 with purple #522B5A - the New Orleans purple/green/gold original.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#006937",
+          "_Color_Outside_Court_R": "#522B5A",
+          "_Color_Area_G": "#522B5A",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_UtahJazz_D_retroLogo_4_team_20",
+        "signage_texture": "txt_bounce_publi_UtahJazz_D_retroLogo_4_team_20"
+      },
+      "LOGO_5_TEAM_20": {
+        "label": "Purple Mountain",
+        "years": "1996-2004",
+        "confidence": "high",
+        "evidence": "Teal #066685 with purple #3C2E87 - the purple/teal/copper mountain era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#066685",
+          "_Color_Outside_Court_R": "#3C2E87",
+          "_Color_Area_G": "#066685",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_UtahJazz_D_retroLogo_5_team_20",
+        "signage_texture": "txt_bounce_publi_UtahJazz_D_retroLogo_5_team_20"
+      }
+    },
+    "21_Golden State Warriors": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1D428A",
+        "_Color_Outside_Court_R": "#FDB927",
+        "_Color_Area_G": "#FDB927",
+        "_Color_Floor_Court_B": "#10254D"
+      },
+      "_texture_token": "GoldenStateWarriors",
+      "LOGO_4_TEAM_21": {
+        "label": "The City",
+        "years": "1966-1971",
+        "confidence": "medium",
+        "evidence": "Orange-red main #DB452C on navy #0D2954 - the Golden Gate Bridge 'The City' jerseys.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#DB452C",
+          "_Color_Outside_Court_R": "#0D2954",
+          "_Color_Area_G": "#0D2954",
+          "_Color_Floor_Court_B": "#071226"
+        },
+        "court_texture": "txt_bounce_court_GoldenStateWarriors_D_retroLogo_4_team_21",
+        "signage_texture": "txt_bounce_publi_GoldenStateWarriors_D_retroLogo_4_team_21"
+      },
+      "LOGO_5_TEAM_21": {
+        "label": "Run TMC",
+        "years": "1988-1997",
+        "confidence": "medium",
+        "evidence": "Royal blue #1D428A with bright yellow #F3D600 on a blue floor #002F6D.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1D428A",
+          "_Color_Outside_Court_R": "#F3D600",
+          "_Color_Area_G": "#F3D600",
+          "_Color_Floor_Court_B": "#002F6D"
+        },
+        "court_texture": "txt_bounce_court_GoldenStateWarriors_D_retroLogo_5_team_21",
+        "signage_texture": "txt_bounce_publi_GoldenStateWarriors_D_retroLogo_5_team_21"
+      }
+    },
+    "23_Los Angeles Lakers": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#31006F",
+        "_Color_Outside_Court_R": "#FDB927",
+        "_Color_Area_G": "#31006F",
+        "_Color_Floor_Court_B": "#180035"
+      },
+      "_texture_token": "LosAngelesLakers",
+      "LOGO_4_TEAM_23": {
+        "label": "Classic Forum",
+        "years": "1967-1999",
+        "confidence": "low",
+        "evidence": "Pale violet floor #7D76B7 with gold #F0C33B - a stylized Forum-era purple/gold court.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#7D76B7",
+          "_Color_Outside_Court_R": "#F0C33B",
+          "_Color_Area_G": "#7D76B7",
+          "_Color_Floor_Court_B": "#7D76B7"
+        },
+        "court_texture": "txt_bounce_court_LosAngelesLakers_D_retroLogo_4_team_23",
+        "signage_texture": "txt_bounce_publi_LosAngelesLakers_D_retroLogo_4_team_23"
+      }
+    },
+    "24_Phoenix Suns": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1D1160",
+        "_Color_Outside_Court_R": "#1D1160",
+        "_Color_Area_G": "#E56020",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "PhoenixSuns",
+      "LOGO_4_TEAM_24": {
+        "label": "Original Suns",
+        "years": "1968-1992",
+        "confidence": "medium",
+        "evidence": "Purple #422C8F with orange #F59110 - the original purple/orange identity.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#422C8F",
+          "_Color_Outside_Court_R": "#F59110",
+          "_Color_Area_G": "#422C8F",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_PhoenixSuns_D_retroLogo_4_team_24",
+        "signage_texture": "txt_bounce_publi_PhoenixSuns_D_retroLogo_4_team_24"
+      },
+      "LOGO_5_TEAM_24": {
+        "label": "Streaking Sun",
+        "years": "1992-2000",
+        "confidence": "medium",
+        "evidence": "Purple #5D2787 with orange #EE722C - the Barkley-era streaking sun.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#5D2787",
+          "_Color_Outside_Court_R": "#EE722C",
+          "_Color_Area_G": "#65287E",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_PhoenixSuns_D_retroLogo_5_team_24",
+        "signage_texture": "txt_bounce_publi_PhoenixSuns_D_retroLogo_5_team_24"
+      }
+    },
+    "25_Sacramento Kings": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#5A2D81",
+        "_Color_Area_G": "#5A2D81",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "SacramentoKings",
+      "LOGO_4_TEAM_25": {
+        "label": "Kansas City Kings",
+        "years": "1975-1985",
+        "confidence": "high",
+        "evidence": "Navy #08357A with red key #F90031 - the blue/red Kansas City identity, not Sacramento purple.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#08357A",
+          "_Color_Outside_Court_R": "#08357A",
+          "_Color_Area_G": "#F90031",
+          "_Color_Floor_Court_B": "#031633"
+        },
+        "court_texture": "txt_bounce_court_SacramentoKings_D_retroLogo_4_team_25",
+        "signage_texture": "txt_bounce_publi_SacramentoKings_D_retroLogo_4_team_25"
+      }
+    },
+    "26_Dallas Mavericks": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#0064B1",
+        "_Color_Outside_Court_R": "#0064B1",
+        "_Color_Area_G": "#00285E",
+        "_Color_Floor_Court_B": "#001633"
+      },
+      "_texture_token": "DallasMavericks",
+      "LOGO_4_TEAM_26": {
+        "label": "Original Mavs",
+        "years": "1980-2001",
+        "confidence": "high",
+        "evidence": "Green main #05724E with navy #002858 - the original blue/green Mavericks.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#05724E",
+          "_Color_Outside_Court_R": "#002858",
+          "_Color_Area_G": "#05724E",
+          "_Color_Floor_Court_B": "#001126"
+        },
+        "court_texture": "txt_bounce_court_DallasMavericks_D_retroLogo_4_team_26",
+        "signage_texture": "txt_bounce_publi_DallasMavericks_D_retroLogo_4_team_26"
+      }
+    },
+    "27_Houston Rockets": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#CE1141",
+        "_Color_Outside_Court_R": "#CE1141",
+        "_Color_Area_G": "#CE1141",
+        "_Color_Floor_Court_B": "#1A1A1A"
+      },
+      "_texture_token": "HoustonRockets",
+      "LOGO_4_TEAM_27": {
+        "label": "Classic Red",
+        "years": "1972-1995",
+        "confidence": "medium",
+        "evidence": "Flat red #DB0029 on black - the red/gold Rockets through the championship years.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#DB0029",
+          "_Color_Outside_Court_R": "#DB0029",
+          "_Color_Area_G": "#DB0029",
+          "_Color_Floor_Court_B": "#1A1A1A"
+        },
+        "court_texture": "txt_bounce_court_HoustonRockets_D_retroLogo_4_team_27",
+        "signage_texture": "txt_bounce_publi_HoustonRockets_D_retroLogo_4_team_27"
+      },
+      "LOGO_5_TEAM_27": {
+        "label": "Pinwheel Navy",
+        "years": "1995-2003",
+        "confidence": "high",
+        "evidence": "Red #C90539 with navy #02295A on a navy floor - the navy/pinwheel rebrand.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#C90539",
+          "_Color_Outside_Court_R": "#02295A",
+          "_Color_Area_G": "#C90539",
+          "_Color_Floor_Court_B": "#011126"
+        },
+        "court_texture": "txt_bounce_court_HoustonRockets_D_retroLogo_5_team_27",
+        "signage_texture": "txt_bounce_publi_HoustonRockets_D_retroLogo_5_team_27"
+      }
+    },
+    "30_San Antonio Spurs": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#1A1A1A",
+        "_Color_Outside_Court_R": "#1A1A1A",
+        "_Color_Area_G": "#1A1A1A",
+        "_Color_Floor_Court_B": "#262626"
+      },
+      "_texture_token": "SanAntonioSpurs",
+      "LOGO_4_TEAM_30": {
+        "label": "Fiesta",
+        "years": "1989-2002",
+        "confidence": "high",
+        "evidence": "Orange #F9A139, teal #00ABA3 and pink #F16578 - unmistakably the Fiesta colors.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#F9A139",
+          "_Color_Outside_Court_R": "#00ABA3",
+          "_Color_Area_G": "#F16578",
+          "_Color_Floor_Court_B": "#262626"
+        },
+        "court_texture": "txt_bounce_court_SanAntonioSpurs_D_retroLogo_4_team_30",
+        "signage_texture": "txt_bounce_publi_SanAntonioSpurs_D_retroLogo_4_team_30"
+      },
+      "LOGO_5_TEAM_30": {
+        "label": "Original Spurs",
+        "years": "1976-1989",
+        "confidence": "low",
+        "evidence": "Black/silver identical to modern - era inferred from logo history only.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1A1A1A",
+          "_Color_Outside_Court_R": "#1A1A1A",
+          "_Color_Area_G": "#1A1A1A",
+          "_Color_Floor_Court_B": "#262626"
+        },
+        "court_texture": "txt_bounce_court_SanAntonioSpurs_D_retroLogo_5_team_30",
+        "signage_texture": "txt_bounce_publi_SanAntonioSpurs_D_retroLogo_5_team_30"
+      }
+    },
+    "33_New Jersey Nets": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#21456A",
+        "_Color_Outside_Court_R": "#21456A",
+        "_Color_Area_G": "#CD1342",
+        "_Color_Floor_Court_B": "#0E1D2D"
+      },
+      "_texture_token": "NewJerseyNets",
+      "LOGO_1_TEAM_33": {
+        "label": "Nets Navy",
+        "years": "1997-2012",
+        "confidence": "medium",
+        "evidence": "Navy #21456A with red key - identical to the legacy team's default court.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#21456A",
+          "_Color_Outside_Court_R": "#21456A",
+          "_Color_Area_G": "#CD1342",
+          "_Color_Floor_Court_B": "#0E1D2D"
+        },
+        "court_texture": "txt_bounce_court_NewJerseyNets_D",
+        "signage_texture": "txt_bounce_publi_NewJerseyNets_D"
+      },
+      "LOGO_2_TEAM_33": {
+        "label": "Royal Blue Nets",
+        "years": "1990-1997",
+        "confidence": "medium",
+        "evidence": "Royal blue #0045AD throughout - the tie-dye/royal era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#0045AD",
+          "_Color_Outside_Court_R": "#0045AD",
+          "_Color_Area_G": "#0045AD",
+          "_Color_Floor_Court_B": "#0E1D2D"
+        },
+        "court_texture": "txt_bounce_court_NewJerseyNets_D_retroLogo_2_team_33",
+        "signage_texture": "txt_bounce_publi_NewJerseyNets_D_retroLogo_2_team_33"
+      },
+      "LOGO_3_TEAM_33": {
+        "label": "Classic Nets",
+        "years": "1977-1990",
+        "confidence": "medium",
+        "evidence": "Lighter blue #1B65B7 with red #EB1444 - the red/white/blue arrival-in-New-Jersey era.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#1B65B7",
+          "_Color_Outside_Court_R": "#1B65B7",
+          "_Color_Area_G": "#EB1444",
+          "_Color_Floor_Court_B": "#0E1D2D"
+        },
+        "court_texture": "txt_bounce_court_NewJerseyNets_D_retroLogo_3_team_33",
+        "signage_texture": "txt_bounce_publi_NewJerseyNets_D_retroLogo_3_team_33"
+      }
+    },
+    "35_Seattle Supersonics": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#005931",
+        "_Color_Outside_Court_R": "#005931",
+        "_Color_Area_G": "#005931",
+        "_Color_Floor_Court_B": "#002615"
+      },
+      "_texture_token": "SeattleSonics",
+      "LOGO_1_TEAM_35": {
+        "label": "Classic Sonics Green",
+        "years": "1975-1995",
+        "confidence": "low",
+        "evidence": "Identical green #005931 to the legacy default court - era inferred from logo history.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#005931",
+          "_Color_Outside_Court_R": "#005931",
+          "_Color_Area_G": "#005931",
+          "_Color_Floor_Court_B": "#002615"
+        },
+        "court_texture": "txt_bounce_court_SeattleSonics_D",
+        "signage_texture": "txt_bounce_publi_SeattleSonics_D"
+      }
+    },
+    "37_GoatTeamLeft": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#008348",
+        "_Color_Outside_Court_R": "#008348",
+        "_Color_Area_G": "#008348",
+        "_Color_Floor_Court_B": "#001A0E"
+      },
+      "_texture_token": null,
+      "LOGO_4_TEAM_1": {
+        "label": "Boston Garden Classic",
+        "years": "1976-1996",
+        "confidence": "low",
+        "evidence": "GOAT team reuses the Celtics container profile.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        }
+      },
+      "LOGO_5_TEAM_1": {
+        "label": "Original Leprechaun",
+        "years": "1950-1968",
+        "confidence": "low",
+        "evidence": "GOAT team reuses the Celtics container profile.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        }
+      }
+    },
+    "38_GoatTeamRight": {
+      "_default_colors": {
+        "_Vertex_Color_R_Main": "#008348",
+        "_Color_Outside_Court_R": "#008348",
+        "_Color_Area_G": "#008348",
+        "_Color_Floor_Court_B": "#001A0E"
+      },
+      "_texture_token": null,
+      "LOGO_4_TEAM_1": {
+        "label": "Boston Garden Classic",
+        "years": "1976-1996",
+        "confidence": "low",
+        "evidence": "GOAT team reuses the Celtics container profile.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        }
+      },
+      "LOGO_5_TEAM_1": {
+        "label": "Original Leprechaun",
+        "years": "1950-1968",
+        "confidence": "low",
+        "evidence": "GOAT team reuses the Celtics container profile.",
+        "colors": {
+          "_Vertex_Color_R_Main": "#008348",
+          "_Color_Outside_Court_R": "#008348",
+          "_Color_Area_G": "#008348",
+          "_Color_Floor_Court_B": "#001A0E"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1824 @@
+{
+ "unity": "6000.0.37f1",
+ "anchoring": "UI 25 = the game's Rookie difficulty, UI 50 = Advanced, UI 75 = Pro (the hardest in-game option). Piecewise, extrapolated beyond.",
+ "convention": "Higher UI = more of that thing for that side (NBA 2K convention)",
+ "categories": [
+  "Shooting",
+  "Passing",
+  "Defense",
+  "Rebounding",
+  "Movement",
+  "Awareness",
+  "Controls"
+ ],
+ "shot_window": {
+  "_model": "Each zone width = shipped_width * fraction. UI 100 = shipped width (easiest the game ships), UI 0 = a sliver.",
+  "slider_100": "shot_window_100",
+  "frac100_at0": 0.03,
+  "frac100_at100": 1.0,
+  "slider_30": "shot_window_30",
+  "frac30_at0": 0.1,
+  "frac30_at100": 1.0,
+  "slider_10": "shot_window_10",
+  "frac10_at0": 0.15,
+  "frac10_at100": 1.0,
+  "note": "Fractions <= 1.0 mean no distance band can become easier than the shipped game, and zones that are zero-width in stock stay zero-width."
+ },
+ "sliders": {
+  "cpu_3pt_frequency": {
+   "label": "CPU 3PT Frequency",
+   "category": "Shooting",
+   "side": "CPU",
+   "description": "How willing the CPU is to take a three. Rolled through the team's shot decision check (TeamAI) every time it looks for a shot. This is a raw weight, not a percentage \u2014 the game's own Advanced difficulty sits at 2.5.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fShoot3PointProbability",
+     "clamp": [
+      0.0,
+      3.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 2.5,
+      "75": 0.5
+     }
+    }
+   ]
+  },
+  "cpu_shot_frequency": {
+   "label": "CPU Shot Frequency",
+   "category": "Shooting",
+   "side": "CPU",
+   "description": "Minimum and maximum delay before a CPU player will look for another shot. Higher = shorter cooldown = the CPU shoots more often. On the game's hardest difficulty (Pro) there is no cooldown at all.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_v2ShootCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       1.0,
+       1.5
+      ],
+      "50": [
+       0.5,
+       0.75
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_dunk_frequency": {
+   "label": "CPU Dunk Frequency",
+   "category": "Shooting",
+   "side": "CPU",
+   "description": "Chance the CPU commits to a dunk when one is available, plus the team-wide cooldown before the next dunk attempt. Read by TeamAI.updateDunk.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fDunkProvability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.75,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2DunkTeamCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       10.0,
+       20.0
+      ],
+      "50": [
+       5.0,
+       10.0
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_alleyoop_frequency": {
+   "label": "CPU Alley-Oop Frequency",
+   "category": "Shooting",
+   "side": "CPU",
+   "description": "Chance the CPU goes for an alley-oop, plus the team cooldown between attempts. Read by TeamAI.updateAlleyOop. Even on the game's hardest difficulty (Pro) the cooldown is 30-40 seconds, so these stay rare.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fAlleyOopProvability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.5,
+      "75": 0.6499999761581421
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2AlleyOopTeamCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       40.0,
+       50.0
+      ],
+      "50": [
+       40.0,
+       50.0
+      ],
+      "75": [
+       30.0,
+       40.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_shot_pass": {
+   "label": "CPU Pass-Out-Of-Shot",
+   "category": "Passing",
+   "side": "CPU",
+   "description": "Chance the CPU bails out of a shot into a pass instead, plus the cooldown between such passes. Read by TeamAI.updateShotPass. Higher = the CPU gives up contested shots more readily.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fShotPassProvability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.6499999761581421,
+      "50": 0.8500000238418579,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2ShotPassTeamCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       5.0,
+       10.0
+      ],
+      "50": [
+       2.0,
+       7.0
+      ],
+      "75": [
+       0.0,
+       2.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_sprint_with_ball": {
+   "label": "CPU Sprint With Ball",
+   "category": "Movement",
+   "side": "CPU",
+   "description": "How readily a CPU ball handler sprints. Feeds AI option scoring (AIOptionForward.calculateScoreAndRisk) and the 'sprint to shake defenders' behaviour.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fSprintWithBallProbability",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.699999988079071,
+      "75": 1.0
+     }
+    }
+   ]
+  },
+  "cpu_steal_success": {
+   "label": "CPU Steal Success",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance a CPU steal attempt succeeds once it is in range. Read by PlayerSteal.getSuccessRate \u2014 the same code path your own steals use.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fStealSuccessProbability",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.4000000059604645,
+      "50": 0.800000011920929,
+      "75": 1.0
+     }
+    }
+   ]
+  },
+  "cpu_steal_frequency": {
+   "label": "CPU Steal Frequency",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Cooldowns before the CPU may try another steal, and before it may rush at the ball handler to force one. Higher = shorter waits = constant ball pressure.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_v2StealCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       1.0,
+       2.0
+      ],
+      "50": [
+       0.4000000059604645,
+       1.0
+      ],
+      "75": [
+       0.20000000298023224,
+       0.5
+      ]
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2RushToStealCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       2.0,
+       2.5
+      ],
+      "50": [
+       1.2000000476837158,
+       2.0
+      ],
+      "75": [
+       0.5,
+       0.75
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_steal_takeball": {
+   "label": "CPU Take-Ball On Steal",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "When a CPU steal succeeds, the chance it comes away with the ball rather than only knocking it loose. Read by PlayerSteal.computeStealOrHitRate.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fStealTakeBallProbability",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.5,
+      "75": 0.75
+     }
+    }
+   ]
+  },
+  "cpu_block_shot": {
+   "label": "CPU Shot Block",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance the CPU goes up to block a jump shot, plus the cooldown between block attempts. Read by TeamAI.updateJumpBlockShot.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fJumpBlockShotProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.75,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2JumpBlockCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       0.20000000298023224,
+       0.30000001192092896
+      ],
+      "50": [
+       0.10000000149011612,
+       0.20000000298023224
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_block_dunk": {
+   "label": "CPU Dunk Block",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance the CPU contests a dunk at the rim, plus its own cooldown. Read by TeamAI.updateJumpBlockDunk. Tracked separately from shot blocking.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fJumpBlockDunkProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.25,
+      "50": 0.699999988079071,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2JumpBlockDunkCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       0.0,
+       0.20000000298023224
+      ],
+      "50": [
+       0.0,
+       0.10000000149011612
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_push_success": {
+   "label": "CPU Push Success",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance a CPU push knocks you off balance, plus the cooldown between pushes. Read by PlayerPush.getSuccessRate.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fPushSucessProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.6499999761581421,
+      "50": 0.8999999761581421,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2PushCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       2.5,
+       3.5
+      ],
+      "50": [
+       1.0,
+       2.0
+      ],
+      "75": [
+       0.75,
+       1.75
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_smack_frequency": {
+   "label": "CPU Smack Frequency",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance the CPU palms the ball out of your hands at the rim, plus its cooldown. Read by PlayerJumpBlock.canAIPalm.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fSmackProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.699999988079071,
+      "75": 0.800000011920929
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2SmackCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       5.0,
+       10.0
+      ],
+      "50": [
+       2.5,
+       5.0
+      ],
+      "75": [
+       1.0,
+       3.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_intercept_pass": {
+   "label": "CPU Pass Interception",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "Chance the CPU jumps a passing lane, plus the cooldown between interception attempts. Read by TeamAI.updateInterceptPass.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fInterceptPassProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.25,
+      "50": 0.5,
+      "75": 0.75
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2InterceptPassCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       0.5,
+       2.0
+      ],
+      "50": [
+       0.0,
+       0.10000000149011612
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_rebound": {
+   "label": "CPU Rebounding",
+   "category": "Rebounding",
+   "side": "CPU",
+   "description": "Chance the CPU wins a rebound, the cooldown between attempts, and how far off the ideal landing spot it is allowed to be. Higher = better odds, shorter waits and more precise positioning. Read by TeamAI.updateReboundData.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fReboundProbability",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.699999988079071,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2ReboundCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       10.0,
+       15.0
+      ],
+      "50": [
+       0.10000000149011612,
+       0.20000000298023224
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_fReboundMaximumOffset",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 1.0,
+      "50": 0.5,
+      "75": 0.0
+     }
+    }
+   ]
+  },
+  "cpu_rebound_pass": {
+   "label": "CPU Outlet Pass After Rebound",
+   "category": "Rebounding",
+   "side": "CPU",
+   "description": "Chance the CPU immediately outlets the ball after grabbing a rebound, plus the cooldown. Read by TeamAI.updateReboundPass.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fPassOnReboundProvabiliy",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.75,
+      "75": 1.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2PassOnReboundCooldown",
+     "clamp": [
+      0.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       20.0,
+       30.0
+      ],
+      "50": [
+       10.0,
+       15.0
+      ],
+      "75": [
+       2.0,
+       5.0
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_defensive_pressure": {
+   "label": "CPU Defensive Pressure",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "How fast CPU defenders build coverage intensity while marking, and separately while marking the ball handler. Read by PlayerCover.computeAddedIntensityOverTime. Higher = they close you down faster.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fIntensityPerSecond",
+     "clamp": [
+      0.0,
+      200.0
+     ],
+     "anchors": {
+      "25": 10.0,
+      "50": 10.0,
+      "75": 25.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_fIntensityPerSecondToBallOwner",
+     "clamp": [
+      0.0,
+      200.0
+     ],
+     "anchors": {
+      "25": 15.0,
+      "50": 15.0,
+      "75": 50.0
+     }
+    }
+   ]
+  },
+  "cpu_cover_tightness": {
+   "label": "CPU Coverage Tightness",
+   "category": "Defense",
+   "side": "CPU",
+   "description": "How sloppy CPU marking is allowed to be: how far off the ideal spot, how far off the ideal angle, and how often the marking target is recomputed. Higher = tighter, better-angled, more frequently corrected coverage.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_fCoverMaximumClosestDistanceOffset",
+     "clamp": [
+      0.0,
+      90.0
+     ],
+     "anchors": {
+      "25": 1.5,
+      "50": 1.0,
+      "75": 0.5
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_fCoverMaximumTargetAngleOffset",
+     "clamp": [
+      0.0,
+      90.0
+     ],
+     "anchors": {
+      "25": 30.0,
+      "50": 10.0,
+      "75": 5.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2CoverTargetUpdateTime",
+     "clamp": [
+      0.0,
+      90.0
+     ],
+     "anchors": {
+      "25": [
+       0.30000001192092896,
+       0.5
+      ],
+      "50": [
+       0.25,
+       0.30000001192092896
+      ],
+      "75": [
+       0.20000000298023224,
+       0.25
+      ]
+     }
+    }
+   ]
+  },
+  "cpu_reaction_time": {
+   "label": "CPU Reaction Speed",
+   "category": "Awareness",
+   "side": "CPU",
+   "description": "CPU delay before reacting: sprinting for a loose ball, starting to sprint while covering, refreshing its estimate of your velocity, and its timing offset on the jump ball. Higher = faster, sharper reactions.",
+   "fields": [
+    {
+     "role": "tiers",
+     "path": "m_v2GoToBallSprintDelay",
+     "clamp": [
+      -2.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       0.25,
+       0.75
+      ],
+      "50": [
+       0.10000000149011612,
+       0.30000001192092896
+      ],
+      "75": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_fCoverTimeToStartSprintingDelay",
+     "clamp": [
+      -2.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 1.5,
+      "50": 1.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_fCoverTimeToUpdateOpponentVelocity",
+     "clamp": [
+      -2.0,
+      60.0
+     ],
+     "anchors": {
+      "25": 1.0,
+      "50": 0.75,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "tiers",
+     "path": "m_v2JumpBallOffsetFromBestTime",
+     "clamp": [
+      -2.0,
+      60.0
+     ],
+     "anchors": {
+      "25": [
+       -1.0,
+       -0.10000000149011612
+      ],
+      "50": [
+       -0.10000000149011612,
+       0.05000000074505806
+      ],
+      "75": [
+       -0.009999999776482582,
+       0.009999999776482582
+      ]
+     }
+    }
+   ]
+  },
+  "user_steal_success": {
+   "label": "User Steal Success",
+   "category": "Defense",
+   "side": "User",
+   "description": "Chance your steal attempt succeeds once you are in range. Read by PlayerSteal.getSuccessRate for the player you control.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_fStealSuccessProbability",
+     "at0": 0.15,
+     "at100": 0.9,
+     "clamp": [
+      0.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  "user_steal_takeball": {
+   "label": "User Take-Ball On Steal",
+   "category": "Defense",
+   "side": "User",
+   "description": "When your steal succeeds, the chance you come away with the ball instead of only knocking it loose.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_fStealTakeBallProbability",
+     "at0": 0.15,
+     "at100": 0.9,
+     "clamp": [
+      0.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  "user_steal_frequency": {
+   "label": "User Steal Frequency",
+   "category": "Defense",
+   "side": "User",
+   "description": "Cooldown before another steal attempt on your side. NOTE: only AI decision code reads these cooldowns, so this governs assisted and automatic attempts by your side rather than gating your own button presses.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_v2StealCooldown",
+     "at0": [
+      3.0,
+      4.0
+     ],
+     "at100": [
+      0.375,
+      0.5
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    },
+    {
+     "role": "human",
+     "path": "m_v2RushToStealCooldown",
+     "at0": [
+      3.0,
+      4.0
+     ],
+     "at100": [
+      0.375,
+      0.5
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "user_block_frequency": {
+   "label": "User Block Frequency",
+   "category": "Defense",
+   "side": "User",
+   "description": "Cooldown before another block attempt on your side. NOTE: only AI decision code reads this cooldown, so it governs assisted attempts rather than gating your own button presses.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_v2JumpBlockCooldown",
+     "at0": [
+      2.0,
+      2.4000000953674316
+     ],
+     "at100": [
+      0.25,
+      0.30000001192092896
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "user_push_frequency": {
+   "label": "User Push Frequency",
+   "category": "Defense",
+   "side": "User",
+   "description": "Cooldown before another push attempt on your side. NOTE: only AI decision code reads this cooldown, so it governs assisted attempts rather than gating your own button presses.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_v2PushCooldown",
+     "at0": [
+      6.0,
+      9.0
+     ],
+     "at100": [
+      0.75,
+      1.125
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "user_intercept_frequency": {
+   "label": "User Pass Interception",
+   "category": "Defense",
+   "side": "User",
+   "description": "Cooldown before your side may jump another passing lane. NOTE: only AI decision code reads this cooldown, so it governs assisted attempts rather than gating your own button presses.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_v2InterceptPassCooldown",
+     "at0": [
+      2.4000000953674316,
+      3.0
+     ],
+     "at100": [
+      0.30000001192092896,
+      0.375
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "user_rebound_frequency": {
+   "label": "User Rebound Frequency",
+   "category": "Rebounding",
+   "side": "User",
+   "description": "Cooldown before your side may contest another rebound. NOTE: only AI decision code reads this cooldown, so it governs assisted attempts rather than gating your own button presses.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_v2ReboundCooldown",
+     "at0": [
+      4.0,
+      5.0
+     ],
+     "at100": [
+      0.5,
+      0.625
+     ],
+     "clamp": [
+      0.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "user_sprint_with_ball": {
+   "label": "User Sprint With Ball",
+   "category": "Movement",
+   "side": "User",
+   "description": "How readily your side commits to sprinting with the ball in AI option scoring. Affects assisted movement, not your own sprint button.",
+   "fields": [
+    {
+     "role": "human",
+     "path": "m_fSprintWithBallProbability",
+     "at0": 0.44999998807907104,
+     "at100": 1.0799999713897706,
+     "clamp": [
+      0.0,
+      1.0
+     ]
+    }
+   ]
+  },
+  "player_speed": {
+   "label": "Player Speed",
+   "category": "Movement",
+   "side": "Both",
+   "description": "Top speed across all eight movement states (walk and sprint, with and without the ball, in and out of contact). Affects BOTH teams \u2014 PlayerStats is shared by every player on the floor and cannot be split by side.",
+   "fields": [
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeed",
+     "at0": 3.8499999999999996,
+     "at100": 7.15,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedSprint",
+     "at0": 5.670000267028808,
+     "at100": 10.530000495910645,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedBall",
+     "at0": 3.080000066757202,
+     "at100": 5.720000123977662,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedBallSprint",
+     "at0": 5.039999866485595,
+     "at100": 9.359999752044677,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedContact",
+     "at0": 3.5,
+     "at100": 6.5,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedSprintContact",
+     "at0": 5.25,
+     "at100": 9.75,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedBallContact",
+     "at0": 2.730000066757202,
+     "at100": 5.070000123977661,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fMaxSpeedBallSprintContact",
+     "at0": 4.6899998664855955,
+     "at100": 8.709999752044679,
+     "clamp": [
+      0.5,
+      20.0
+     ]
+    }
+   ]
+  },
+  "player_acceleration": {
+   "label": "Player Acceleration",
+   "category": "Movement",
+   "side": "Both",
+   "description": "How quickly players reach top speed, walking and sprinting. Affects BOTH teams.",
+   "fields": [
+    {
+     "role": "playerstats",
+     "path": "m_fAcceleration",
+     "at0": 25.0,
+     "at100": 75.0,
+     "clamp": [
+      1.0,
+      200.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fAccelerationSprint",
+     "at0": 25.0,
+     "at100": 75.0,
+     "clamp": [
+      1.0,
+      200.0
+     ]
+    }
+   ]
+  },
+  "pass_speed": {
+   "label": "Pass Speed",
+   "category": "Passing",
+   "side": "Both",
+   "description": "How fast the ball travels on normal passes and on alley-oop passes. Affects BOTH teams \u2014 faster passes are harder to intercept, which cuts both ways.",
+   "fields": [
+    {
+     "role": "playerstats",
+     "path": "m_fPassSpeed",
+     "at0": 9.0,
+     "at100": 22.5,
+     "clamp": [
+      1.0,
+      60.0
+     ]
+    },
+    {
+     "role": "playerstats",
+     "path": "m_fPassSpeedAllieOop",
+     "at0": 9.0,
+     "at100": 22.5,
+     "clamp": [
+      1.0,
+      60.0
+     ]
+    }
+   ]
+  },
+  "input_memory": {
+   "label": "Input Buffer Window",
+   "category": "Controls",
+   "side": "Both",
+   "description": "How long a queued action is remembered while a player is receiving a pass, before it is discarded (PlayerReceiving.update). Higher is more forgiving on catch-and-shoot timing. Affects BOTH teams.",
+   "fields": [
+    {
+     "role": "playerstats",
+     "path": "m_fInputMemoryTime",
+     "at0": 0.12000000476837158,
+     "at100": 0.6000000238418579,
+     "clamp": [
+      0.05,
+      2.0
+     ]
+    }
+   ]
+  },
+  "cpu_shooting_accuracy": {
+   "label": "CPU Shooting Accuracy",
+   "category": "Shooting",
+   "side": "CPU",
+   "description": "Where the CPU aims on its own shot bar, for each shot distance. Blends the full 7x7 release-profile matrix through the game's own Rookie, Advanced and Pro release profiles. This is the single biggest lever on CPU shooting percentage.",
+   "fields": [
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.4000000059604645,
+      "75": 0.20000000298023224
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 0.20000001788139343,
+      "75": 0.4000000059604645
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 0.19999998807907104,
+      "75": 0.30000001192092896
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.19999998807907104,
+      "75": 0.10000000149011612
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[0].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.75,
+      "75": 0.8999999761581421
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.699999988079071,
+      "50": 0.25,
+      "75": 0.10000000149011612
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[1].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.75,
+      "75": 0.8999999761581421
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.699999988079071,
+      "50": 0.25,
+      "75": 0.10000000149011612
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[2].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.550000011920929,
+      "50": 0.5,
+      "75": 0.30000001192092896
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.05000000074505806,
+      "50": 0.25,
+      "75": 0.5
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.25,
+      "75": 0.20000000298023224
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[3].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.5,
+      "50": 0.5,
+      "75": 0.25
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.09000000357627869,
+      "50": 0.19999998807907104,
+      "75": 0.30000001192092896
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.009999999776482582,
+      "50": 0.050000011920928955,
+      "75": 0.20000000298023224
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000002384185791,
+      "50": 0.10000002384185791,
+      "75": 0.20000000298023224
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.30000001192092896,
+      "50": 0.1499999761581421,
+      "75": 0.05000000074505806
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[4].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.4000000059604645,
+      "50": 0.20000000298023224,
+      "75": 0.05000000074505806
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.20000000298023224,
+      "50": 0.20000000298023224,
+      "75": 0.15000000596046448
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 0.20000001788139343,
+      "75": 0.3499999940395355
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.3499999940395355
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 0.2999999523162842,
+      "75": 0.05000000074505806
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[5].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.20000000298023224,
+      "50": 0.10000002384185791,
+      "75": 0.05000000074505806
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[0].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.4000000059604645,
+      "50": 0.4000000059604645,
+      "75": 0.15000000596046448
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[1].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.10000000149011612,
+      "50": 0.29999998211860657,
+      "75": 0.25
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[2].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.05000000074505806,
+      "50": 0.10000002384185791,
+      "75": 0.3499999940395355
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[3].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[4].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.0,
+      "50": 0.0,
+      "75": 0.0
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[5].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.05000000074505806,
+      "50": 0.09999996423721313,
+      "75": 0.20000000298023224
+     }
+    },
+    {
+     "role": "bars",
+     "path": "m_aoChargingBarChunksProbabilities[6].m_afChunkProbabilities[6].m_fValue",
+     "clamp": [
+      0.0,
+      1.0
+     ],
+     "anchors": {
+      "25": 0.20000000298023224,
+      "50": 0.10000002384185791,
+      "75": 0.05000000074505806
+     }
+    }
+   ]
+  },
+  "shot_window_100": {
+   "label": "User Green Window",
+   "category": "Shooting",
+   "side": "User",
+   "description": "Width of the green (guaranteed make) release window on your shot bar, as a fraction of the width the game ships. The single biggest lever on how hard shooting feels. At 100 the window is exactly as shipped; lower narrows it at every distance. Bands the game ships with no green window at all (0 m, 12 m, 15 m) stay that way.",
+   "fields": []
+  },
+  "shot_window_30": {
+   "label": "User Yellow Zones",
+   "category": "Shooting",
+   "side": "User",
+   "description": "Width of the yellow 30%-make zones on either side of the green window, as a fraction of the shipped width.",
+   "fields": []
+  },
+  "shot_window_10": {
+   "label": "User Orange Zones",
+   "category": "Shooting",
+   "side": "User",
+   "description": "Width of the orange 10%-make zones, as a fraction of the shipped width. Anything outside these falls into the 5% zone.",
+   "fields": []
+  }
+ }
+}

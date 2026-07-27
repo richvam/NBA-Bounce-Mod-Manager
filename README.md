@@ -1,6 +1,6 @@
-# 🏀 NBA Bounce Texture Mod Manager
+# NBA Bounce Mod Manager
 
-> A Windows desktop app for replacing textures in **NBA Bounce** (Unity 6) — browse, preview, import, and apply custom PNG textures without ever touching a hex editor.
+> A Windows desktop app for modding **NBA Bounce** (Unity 6): textures, audio, court floors, court colors, and gameplay sliders, all from one tool, without ever touching a hex editor.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
@@ -10,35 +10,28 @@
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---|---|
-| 🖼️ Texture browser | Browse all ~2,000+ `Texture2D` assets across every game file |
-| 🔍 Search & filter | Live search by name; filter by `.assets` source file |
-| 📋 Sortable list | Sort by name, resolution, mod status, or file — click any column header |
-| 👁️ Side-by-side preview | See the original and your replacement at the same time |
-| ⬇️ Export original | Save any texture as PNG for editing in your image editor |
-| 📦 Batch export | Ctrl+click to select multiple textures and export them all as a ZIP |
-| ⬆️ Import replacement | Import a PNG replacement for any texture |
-| ▶️ Apply all mods | Write all replacements into the game in one click, with automatic backup |
-| ↶ Revert in game | Undo a single texture without restoring all originals |
-| ♻️ Restore originals | Roll back every modded file to its original state |
-| 📦 Export mod pack | Bundle all your mods into a shareable `.zip` |
-| 📥 Import mod pack | Install a friend's mod pack in one step |
-| 🔍 Auto-detect game | Automatically finds your NBA Bounce Steam install on first launch |
-| 🌙☀️ Dark / Light mode | Full NBA-branded dark and light themes, switchable in Settings |
-| 📊 Version display | Shows game version and Unity engine version in the status bar |
+| Home screen | Big, one-click cards for every tool below; everything is also always reachable from the tabs at the top |
+| Textures | Browse, preview, export, and replace any of the ~2,000+ `Texture2D` assets in the game |
+| Audio | Browse, play, tag the language of, and replace any in-game audio clip |
+| Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
+| Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
+| Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
+| Dark / Light mode | NBA-branded "Arena Night" (dark) and "Broadcast Day" (light) themes, switchable in Settings |
+| Automatic backups | Every tool backs up the original game files before its first write, and can restore them any time |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Requirements
 
 - **Windows 10 / 11**
-- **Python 3.9 or newer** — download from [python.org](https://www.python.org/downloads/)
-  - ⚠️ During install, check **"Add Python to PATH"**
+- **Python 3.9 or newer**, download from [python.org](https://www.python.org/downloads/)
+  - During install, check **"Add Python to PATH"**
 - **NBA Bounce** installed via Steam
 
 ### First-Time Setup
@@ -50,154 +43,138 @@ That's it. The script installs all Python dependencies automatically and launche
 
 ### Subsequent Launches
 
-Double-click **`RUN.bat`** — it skips the install step if everything is already in place.
+Double-click **`RUN.bat`**. It skips the install step if everything is already in place.
 
----
+### Configure Your Paths
 
-## 📖 How to Use
-
-### 1 — Configure Paths
-
-On first launch the app will try to **auto-detect** your NBA Bounce Steam install. If it succeeds, you can skip this step entirely.
-
-If auto-detect doesn't find the game, click **⚙ Settings** and set:
+Click **Settings** in the top bar and set:
 
 | Setting | What to enter |
 |---|---|
-| **Game Data Folder** | The `NBA Bounce_Data` folder inside your Steam install<br>e.g. `C:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data\` |
-| **Mods Folder** | Any folder where you want your replacement PNGs stored<br>e.g. `C:\Users\You\Documents\NBABounceMods` |
+| **Game Data Folder** | The `NBA Bounce_Data` folder inside your Steam install, e.g. `C:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data\` |
+| **Mods Folder** | Any folder where you want your replacement PNGs and audio files stored, e.g. `C:\Users\You\Documents\NBABounceMods` |
 
-Click **Save & Reload** and the texture list will populate.
-
----
-
-### 2 — Browse & Find Textures
-
-The left panel lists every `Texture2D` asset found across all game files.
-
-- **Search box** — type any part of a texture name to filter the list live
-- **Filter by file** — narrow down to a specific `.assets` source file
-- **Column sort** — click any column header to sort; click again to reverse
-  - `Texture Name` — alphabetical
-  - `Size` — by pixel area (largest first)
-  - `Mod` — modded textures float to the top
-  - `File` — groups by source file
-- **Multi-select** — hold **Ctrl** or **Shift** and click to select multiple textures for batch operations
-- Textures with an active mod show a **✔** in the Mod column and are highlighted in **gold**
+Click **Save & Reload**. Every tab reads from these same two paths.
 
 ---
 
-### 3 — Preview Textures
+## Home Screen
 
-Click any texture in the list to load a preview on the right:
-
-| Panel | What it shows |
-|---|---|
-| **Original** *(blue border)* | The unmodified texture, always read from the original backup |
-| **Your Mod** *(red border)* | Your replacement PNG, if one has been imported |
-
-The info bar below the previews shows the texture name, resolution, compression format, and which `.assets` file it comes from.
+The app opens on **Home**, with a card for each tool: Textures, Audio, Floor Patterns, Gameplay Sliders, and Court Colors. Clicking a card jumps to that tool. The tabs across the top (Home, Textures, Audio, Floor Patterns, Gameplay Sliders, Court Colors) are always visible too, so you never have to come back to Home just to switch tools.
 
 ---
 
-### 4 — Export an Original
+## Textures
 
-1. Select a texture in the list
-2. Click **⬇ Export Original**
-3. Save the PNG anywhere you like
-4. Open it in Photoshop, GIMP, Aseprite, or any image editor
+The **Textures** tab lists every `Texture2D` asset found across all of the game's `.assets` files.
 
-> **Tip:** Your replacement PNG does *not* need to be the same resolution, but matching it avoids any in-game stretching.
+- **Search box**: type any part of a texture name to filter the list live
+- **Filter by file**: narrow down to a specific `.assets` source file
+- **Column sort**: click any column header to sort; click again to reverse (Texture Name, Size, Mod status, or File)
+- Textures with an active mod show a checkmark in the Mod column
 
-**Batch export:** Select multiple textures with Ctrl+click, then click **📦 Batch Export** to save them all to a single ZIP archive.
+Select a texture to see it previewed on the right, side by side with your replacement if you've imported one:
 
----
+1. **Export Original**: save the true, unmodified texture as a PNG so you can edit it in Photoshop, GIMP, Aseprite, or any image editor
+   - Your replacement doesn't need to match the original's resolution exactly, but matching it avoids any in-game stretching
+2. **Import Replacement**: pick your edited PNG. It's copied into your Mods Folder and tracked in `mods.json`; the game file isn't touched yet
+3. **Remove Mod**: clears the replacement for the selected texture
 
-### 5 — Import a Replacement
+When you're ready to write your changes into the game, use the buttons in the top bar (available from any tab):
 
-1. Select the texture you want to replace in the list
-2. Click **⬆ Import Replacement**
-3. Choose your edited PNG
-
-The replacement is copied to your Mods Folder and registered in `mods.json`. The game file is **not changed yet**.
-
----
-
-### 6 — Apply Mods to the Game
-
-Click **▶ Apply All Mods** when you're ready.
-
-- The app backs up all affected `.assets` and `.resS` files automatically before the first write (only once — never overwrites an existing backup)
-- A progress bar shows each texture as it is applied
-- All replacements are written in a single pass
-
-> You can re-run **▶ Apply All Mods** as many times as you like — after a game update, just click it again and all your mods come back instantly.
+- **Apply Texture Mods**: writes every queued texture replacement into the game in one pass. The affected `.assets` and `.resS` files are backed up automatically the first time (never overwritten after that), so this is always safe to re-run, including after a game update, when it'll instantly bring all your mods back.
+- **Restore Textures**: rolls every modded texture file back to its original state. Your replacement PNGs are kept, so you can re-apply them at any time.
 
 ---
 
-### 7 — Revert a Single Texture
+## Audio
 
-If you want to undo just one mod without touching the others:
+The **Audio** tab lists every `AudioClip` asset found across the game's asset files, and works the same way as Textures: live search, filter by source file, filter by language, and sortable columns.
 
-1. Select the texture
-2. Click **↶ Revert in Game**
+Select a clip to:
 
-The original texture bytes are patched back into the game file. Your mod PNG and its entry in `mods.json` are **kept** — use **▶ Apply All Mods** to re-apply it later.
+- **Play**: plays your queued replacement if you have one, otherwise the original
+- **Original**: always plays the true original, for A/B comparison against your replacement
+- **Pause** / **Stop**
+- **Language**: tag the clip's spoken language from a dropdown. Your manual tag is remembered; otherwise the app makes a best-effort guess from the clip's name
+- **Export WAV**: save the original clip as a WAV file
+- **Queue Replacement**: pick a WAV to replace the clip with (experimental, see note below)
+- **Remove**: clears a queued replacement
 
----
+As with Textures, the top bar has:
 
-### 8 — Restore All Originals
+- **Apply Audio Mods**: writes queued replacements into the game, backing up the affected files first
+- **Restore Audio**: restores the originals; your queued replacements are kept
 
-Click **♻ Restore Originals** to roll back every game file to its unmodified state.
-
-- All backed-up `.assets` and `.resS` files are restored
-- Your mod PNGs are **not deleted**
-- You can re-apply all mods at any time with **▶ Apply All Mods**
-
----
-
-### 9 — Mod Packs (Share with Friends)
-
-**Exporting a pack:**
-
-1. Set up your mods as normal
-2. Click **📦 Export Pack**
-3. Save the `.zip` — share it anywhere (Discord, GitHub Releases, etc.)
-
-**Importing a pack:**
-
-1. Click **📥 Import Pack**
-2. Select the received `.zip`
-3. Click **▶ Apply All Mods** to write the textures into your game
-
-Mod packs use relative filenames so they work on any machine regardless of where the game is installed.
+> **Note on audio replacement:** NBA Bounce's audio is FMOD-Vorbis, and there's no pure-Python FMOD encoder available, so replacements are injected as raw PCM with the clip's format flipped to PCM. This is confirmed to work for clips the game loads into memory up front. For clips that stream continuously, the game may ignore the replacement; it won't crash, the sound just won't change.
 
 ---
 
-## ⚙️ Settings
+## Floor Patterns
 
-Open **⚙ Settings** from the top bar at any time.
+Give any team's court a different wood-grain look, chosen from a library of patterns (basketweave, herringbone, chevron, diagonal maple, wide plank, and more).
+
+- **Assign to court**: apply a pattern to the selected team
+- **Reset court to stock floor**: put a team back to the default look
+- **Export pattern for editing** / **Import custom PNG**: bring in your own pattern art
+- **Apply to game**: write your assignments into the game files
+- **Revert all floors**: restore every court to stock
+
+Up to 8 custom patterns can be active across the league at once (the pattern library itself is unlimited; you just can't have more than 8 different ones assigned at the same time).
+
+---
+
+## Gameplay Sliders
+
+Fine-tune how the game plays across 7 categories: Shooting, Passing, Defense, Rebounding, Movement, Awareness, and Controls (35 sliders in total).
+
+- **Difficulty presets** (2K-style naming): Rookie, Pro, All-Star, Superstar, Hall of Fame. Pick one as a starting point, then adjust individual sliders from there
+- **Which difficulty in-game?**: an in-app explainer, since NBA Bounce's own Rookie / Advanced / Pro menu doesn't line up one-to-one with these preset names
+- **Apply to Game** / **Restore Stock**
+- **Save Set** / **Load Set**: save your own slider combinations and reload them later
+
+---
+
+## Court Colors
+
+Recolor a team's court, split into two independent pieces:
+
+- **Floor Color**: the parquet tint itself
+- **Court Lines & Areas**: seven separately-colorable elements: Sideline/Apron, Key/Paint Fill, Outer Surround, Court Lines, Key/Paint Marks, Three-Point Line, and Free-Throw Circle
+
+Pick a team from the dropdown, then click any color swatch to open the built-in color picker (RGB sliders, hex entry, and an eyedropper that can sample any pixel on your screen, not just inside the app). Other options:
+
+- **Copy colors from**: copy another team's current colors onto the selected team as a starting point (only updates the preview until you apply)
+- **Also apply to retro / throwback courts**: keep a team's alternate courts in sync
+- **Apply to Game**: write your changes (only visible in-game after a restart)
+- **Reset This Team**: revert the selected team back to its original colors
+
+---
+
+## Settings
+
+Open **Settings** from the top bar at any time.
 
 | Option | Description |
 |---|---|
 | **Game Data Folder** | Path to `NBA Bounce_Data` |
-| **Mods Folder** | Where your PNG replacements are stored |
-| **🔍 Auto-Detect Game** | Re-runs Steam library scan to find the game |
-| **🌙 Dark Mode** | Arena Night — deep navy with NBA blue & red accents |
-| **☀️ Light Mode** | Broadcast Day — clean white with NBA blue & red accents |
-
-Theme changes apply live; your choice is saved automatically.
+| **Mods Folder** | Where your PNG/WAV replacements and mod metadata are stored |
+| **Appearance** | **Dark** ("Arena Night") or **Light** ("Broadcast Day"); takes effect the next time you launch the app |
 
 ---
 
-## 📁 File Structure
+## File Structure
 
 ```
 nba-bounce-mod-manager/
-├── app.py                  # Main application
-├── SETUP_AND_RUN.bat       # First-time setup + launch
-├── RUN.bat                 # Quick launch (after first setup)
-├── config.json             # Auto-generated: saved paths and theme preference
+├── app.py                              # Main app: Home / Textures / Audio tabs, Settings
+├── audio_manager.py                    # Audio tab: playback, language tags, replacements
+├── floor_patterns.py                   # Floor Patterns tool
+├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
+├── sliders_catalog.json / presets.json # Slider definitions and difficulty presets
+├── SETUP_AND_RUN.bat                   # First-time setup + launch
+├── RUN.bat                             # Quick launch (after first setup)
+├── config.json                         # Auto-generated: saved paths and theme preference
 └── README.md
 ```
 
@@ -206,29 +183,32 @@ nba-bounce-mod-manager/
 ```
 <mods_folder>/
 ├── mods.json               # Maps each texture to its replacement PNG
-└── *.png                   # Your replacement textures
+├── audio_mods.json         # Maps each audio clip to its replacement WAV
+├── languages.json          # Manually-tagged audio clip languages
+├── *.png                   # Your replacement textures
+└── *.wav                   # Your replacement audio clips
 ```
 
-> **Don't delete `mods.json`** — it's how the app knows which PNG belongs to which in-game texture.
+> **Don't delete these `.json` files**: they're how the app knows which replacement belongs to which in-game asset.
 
 ---
 
-## 🔧 Technical Notes
+## Technical Notes
 
 <details>
-<summary>How textures are patched (click to expand)</summary>
+<summary>How assets are patched (click to expand)</summary>
 
-NBA Bounce uses Unity 6 (`6000.0.37f1`). Textures are stored across multiple `.assets` files, with pixel data in companion `.resS` files.
+NBA Bounce uses Unity 6 (`6000.0.37f1`). Textures and audio are stored across multiple `.assets` files, with pixel/audio data in companion `.resS`/`.resource` files.
 
-The app uses an **in-place binary patch** strategy:
+Every tool in this app uses the same **in-place binary patch** strategy:
 
-1. New pixel data is appended to the `.resS` file
-2. Only the target texture's metadata bytes are updated in the `.assets` file (width, height, format, stream offset/size)
+1. New data (pixels, audio, or a color value) is written to the appropriate file
+2. Only the target object's metadata bytes are updated, never resized
 3. All other objects in the file are left bit-for-bit identical
 
-This avoids a known bug in UnityPy 1.25's `save()` method that causes ~6 KB of data loss from unmodified objects.
+This avoids a known bug in UnityPy 1.25's `save()` method that causes data loss from unmodified objects when a file is fully re-serialized.
 
-**Format mapping:**
+**Texture format mapping:**
 | Original format | Written as | Why |
 |---|---|---|
 | DXT5 / DXT5Crunched | BC7 | Same 1 byte/pixel footprint, better quality |
@@ -243,6 +223,7 @@ This avoids a known bug in UnityPy 1.25's `save()` method that causes ~6 KB of d
 ```
 UnityPy==1.25.0
 Pillow
+pygame
 attrs
 lz4
 brotli
@@ -250,6 +231,7 @@ etcpak
 texture2ddecoder
 astc-encoder-py
 fsspec
+dnfile
 ```
 
 All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` itself on first run. No manual `pip install` is needed.
@@ -258,32 +240,32 @@ All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` i
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | **"UnityPy not installed" on launch** | Run `SETUP_AND_RUN.bat` (not `RUN.bat`) to reinstall dependencies |
-| **Game data folder not found** | Open Settings → click 🔍 Auto-Detect Game, or browse manually to `NBA Bounce_Data` |
+| **Game data folder not found** | Open Settings and browse to your `NBA Bounce_Data` folder |
 | **Textures look wrong / stretched in game** | Your replacement PNG should match the original's resolution |
-| **Game crashes after applying** | Click ♻ Restore Originals to revert, then check your PNG is a valid RGBA image |
-| **Version shows "unknown"** | Make sure the Game Data Folder path is set correctly and `globalgamemanagers` exists in it |
-| **Mod not showing after game update** | Game updates overwrite `.assets` files — just click ▶ Apply All Mods again |
-| **Import Pack says "skipped"** | The mod pack was made on a different version of the game; the texture may have moved to a different `.assets` file |
+| **Game crashes after applying** | Click Restore Textures (or Restore Audio) to revert, then check your replacement file is valid |
+| **Audio replacement doesn't seem to change anything** | Some clips stream continuously and may ignore replacement; see the note under Audio above |
+| **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Texture Mods / Apply Audio Mods again |
+| **Court Colors / Floor Patterns changes not visible** | Changes only appear after fully quitting and relaunching the game |
 
 ---
 
-## 📜 License
+## License
 
-MIT — do whatever you want with it.
-
----
-
-## 🙏 Credits
-
-Built with [UnityPy](https://github.com/K0lb3/UnityPy) by K0lb3 — the only Python library that makes Unity asset editing possible.
+MIT. Do whatever you want with it.
 
 ---
 
-## 🤖 Development
+## Credits
 
-Co-developed with [Claude](https://claude.ai) by Anthropic. The core Unity texture patching logic was built and debugged iteratively through AI-assisted development.
+Built with [UnityPy](https://github.com/K0lb3/UnityPy) by K0lb3, the only Python library that makes Unity asset editing possible.
+
+---
+
+## Development
+
+Co-developed with [Claude](https://claude.ai) by Anthropic. The core Unity asset patching logic was built and debugged iteratively through AI-assisted development.

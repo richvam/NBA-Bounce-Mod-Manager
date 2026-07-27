@@ -1,12 +1,21 @@
 # ── User-specific config (auto-generated on first run) ────────────────────────
 config.json
 
-# ── Mod data (personal to each user's install) ────────────────────────────────
+# ── Mod data (personal to each user's install, lives in their chosen Mods Folder) ──
 mods.json
-*.png
+audio_mods.json
+languages.json
+
+# ── Floor Patterns (per-user court assignments / revert journal, NOT the shipped
+#    pattern art in floor_patterns/, which must stay tracked) ─────────────────
+floor_patterns.json
+floor_patterns_journal.json
+floor_patterns_journal.json.done
 
 # ── Game file backups created by the app ──────────────────────────────────────
 *.original_backup
+app.py.bak_*
+*.bak_libreoffice
 *.assets.resS.original_backup
 *.resource.original_backup
 

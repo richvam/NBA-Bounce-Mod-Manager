@@ -1,9 +1,9 @@
 @echo off
-title NBA Bounce Texture Mod Manager - Setup
+title NBA Bounce Mod Manager - Setup
 color 0A
 echo.
 echo  ==========================================
-echo   NBA Bounce Texture Mod Manager - Setup
+echo   NBA Bounce Mod Manager - Setup
 echo  ==========================================
 echo.
 
@@ -38,7 +38,7 @@ if errorlevel 1 (
 echo.
 echo  [OK] All packages installed successfully.
 echo.
-echo  Launching NBA Bounce Texture Mod Manager...
+echo  Launching NBA Bounce Mod Manager...
 echo.
 
 python "%~dp0app.py"
