@@ -20,6 +20,7 @@
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
+| Saves | Unlock every cosmetic in your save file, with four safety gates and an automatic backup kept outside your Steam Cloud folder |
 | Dark / Light mode | NBA-branded "Arena Night" (dark) and "Broadcast Day" (light) themes, switchable in Settings |
 | Automatic backups | Every tool backs up the original game files before its first write, and can restore them any time |
 
@@ -150,6 +151,49 @@ Pick a team from the dropdown, then click any color swatch to open the built-in 
 - **Reset This Team**: revert the selected team back to its original colors
 
 ---
+## Saves
+
+Unlocks the cosmetics in your save file.
+
+Pick a save from the list and the tab shows every unlockable the game knows
+about, split into what you already own and what's still locked. **Apply** adds
+the locked ones.
+
+- **Save discovery is automatic.** The tab looks for the documented folder under
+  `%USERPROFILE%\AppData\LocalLow`, then retries case-insensitively, then falls
+  back to scanning LocalLow for any folder actually containing an
+  `NBABounce*.sav`. That last step covers installs where the publisher folder has
+  been renamed. Saves are listed newest-first, and **Browse** opens in the save
+  folder rather than wherever you last were.
+- **The unlockable list is read from the game, not hardcoded.** It's extracted
+  from `level1` and cached to `unlockables_catalog.json`, keyed on that file's
+  size and modification time — so a game patch that adds items, or flips one from
+  enabled to disabled, invalidates the cache automatically.
+- **Your save is backed up first**, and the backup is written *outside* the
+  Steam Cloud folder so it doesn't eat your cloud quota.
+
+### Safety
+
+Save files are far less forgiving than texture edits: a malformed one can cost
+you your progress. Four checks run on every apply, and **any failure aborts**:
+
+| Gate | What it prevents |
+|---|---|
+| Input must round-trip byte-identically before any edit is made | Writing a file the parser didn't fully understand |
+| Every added ID must have `m_bEnabled == 1` | Injecting items the game has disabled |
+| Nothing you already own may be dropped | Losing existing unlocks |
+| Output must have no duplicate object IDs and no dangling references | Producing a save the game refuses to load |
+
+The new file is written to a temp path and moved into place with `os.replace`,
+so an abort leaves your original save untouched. Applying twice is a no-op —
+the second run finds nothing to add.
+
+Items the game generates at runtime (the `RANDOM_*` cosmetics minted by
+`calculateRandomUnlockable`) aren't in the static catalog but are preserved
+verbatim, so unlocking never costs you a random drop you'd already earned.
+
+> **Note:** this tool only reads `level1` and writes your `.sav`. It never opens
+> a `.assets` file and never touches the texture-patching path.
 
 ## Settings
 
