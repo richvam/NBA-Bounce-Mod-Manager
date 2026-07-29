@@ -104,6 +104,52 @@ This is exposed directly in the app via the 🎨 Court Colors button — no manu
 
 ---
 
+# **Sprite Crops — why a replacement logo comes out cut off**
+
+*Verified against sharedassets1/2 and resources.assets. This is the mechanism behind the sprite un-crop that now runs automatically on Apply.*
+
+Replacing a logo texture is only half the object graph. Every logo in the game is drawn through a Unity **Sprite** that sits in front of the Texture2D, and all of them were imported with **Mesh Type = Tight**. Two things were therefore baked at build time from the *original* artwork's opaque pixels:
+
+| **Baked field** | **What it holds** | **Example — GSWarriors_Global** |
+| --- | --- | --- |
+| `m_RD.textureRect` | Tight crop box around the old logo, in pixels, bottom-left origin | 514×619 at (259, 193) inside a 1024×1024 texture |
+| `m_RD.m_VertexData` / `m_IndexBuffer` | Polygon hull of the old logo's silhouette | 250 vertices / 879 indices |
+| `m_RD.settingsRaw` bit 6 (=64) | meshType: 1 = Tight, 0 = FullRect | 64 |
+
+UGUI maps the sprite's `m_Rect` (the whole canvas) onto the on-screen box and pads the difference — `DataUtility.GetPadding` — so **only the pixels inside `textureRect` are ever sampled**. Replacing the texture pixels leaves that box describing the logo that used to be there. A replacement covering more of the canvas than the logo it replaced — exactly what happens when a wide wordmark replaces a round primary logo — is silently clipped to the old logo's bounding box, even though it lined up perfectly in Photoshop on top of the exported original.
+
+This is not a rare case. Sprites front nearly every identity texture, and almost all of them are trimmed:
+
+| **File** | **Sprites** | **Trimmed crop** | **Tight mesh** | **Multi-sprite atlases** |
+| --- | --- | --- | --- | --- |
+| sharedassets1.assets | 350 | 341 | 349 | 1 |
+| sharedassets2.assets | 326 | 255 | 325 | 1 |
+| resources.assets | 62 | 57 | 57 | 0 |
+
+Jersey textures (`txt_avatar_*`), court decals and arena signage have **no** sprite in front of them, so they were never affected — the problem is specific to the menu logos, icons, unlock art and classic logos.
+
+## **The patch**
+
+Point the crop at the whole texture and drop the baked hull:
+
+- `textureRect` → `(0, 0, m_Width, m_Height)`, `textureRectOffset` → `(0, 0)`
+- `settingsRaw` → clear bit 6, so meshType becomes FullRect
+- rewrite the tight hull as one full-rect quad: first four vertices become the rect's corners with UV (0,0)–(1,1), every later vertex is a copy of the first, the first six indices draw the quad and every remaining index is zeroed into a degenerate, never-rasterised triangle
+
+Vertex streams are laid out in stream order, each padded up to a 16-byte boundary (`m_VertexData.m_DataSize` = 5008 bytes for 250 verts: 250×12 → 3008, then 250×8). Refilling both buffers at their existing length keeps them byte-identical in size, and everything else overwritten is a fixed-width float or int — so the reserialized Sprite comes out the same byte size and splices into the `.assets` file in place, exactly like the texture and material patches above.
+
+**Multi-sprite textures are left alone.** Where several sprites share one texture (`txt_assets_decorationAnimationGOAT_D` carries five), each `textureRect` is a real sub-region and widening one would move the others' artwork. The Mod Manager detects this on import and lists the regions the replacement has to stay inside instead.
+
+## **In the Mod Manager**
+
+`sprite_crop.py`, self-contained — it imports nothing from app.py. Selecting a texture outlines its crop box on the **Original** preview with a dashed rectangle and states it in the info line, so it's visible before authoring anything that the old logo only used the middle 514×619 of its canvas. Apply then widens the crop automatically and reports how many sprites it touched; Remove Mod puts the texture and its sprite back to stock byte-for-byte from the backup without disturbing other mods.
+
+## **Related: streamed pixel data and multiple mods in one file**
+
+Worth recording alongside the above, since it produces the same *symptom*. Every Texture2D in this game is streamed — 1,140 of 1,140 in sharedassets1.assets, 431 of 434 in resources.assets carry an `m_StreamData.path`, with pixels living in the companion `.resS`. `apply_single_mod()` appends the new pixels to the `.resS` and repoints `offset`/`size`, which means the `.resS` may only be rewound to its backup **once per Apply run**. Rewinding it per mod — as the app used to — discards the bytes of every mod already applied to the same file and leaves those textures pointing at a stale offset, often past the new end of file. Reproduced with two 1024×1024 mods in sharedassets1.assets: both objects ended up at offset 122,221,152 and both rendered the second mod's image. Since a full team reskin touches ~17 textures across two files, this hit essentially every multi-texture mod.
+
+---
+
 # **Court Floor Patterns — the `_Texture_Parquet` Slot**
 
 *Verified in-game. This is the mechanism behind the Floor Patterns feature.*
@@ -209,7 +255,7 @@ Tested on the Celtics court with a deliberately garish validator texture, then w
 
 Exposed via the **Floor Patterns** window (`floor_patterns.py`, self-contained — it imports nothing from app.py and never touches `apply_single_mod()`). It ships nine procedural, seamless, greyscale patterns based on real arena hardwood layouts, supports importing custom PNGs, previews each pattern tiled and tinted with the selected court's actual `_Color_Parquet`, allocates donor slots automatically, and warns when the eight-slot ceiling is reached.
 
-**Stock floor as a template.** On first run the window decodes `txt_bounce_parquet01_D` out of the game — from `sharedassets1.assets.original_backup` when one exists, so a previously applied pattern can't be mistaken for the original — and caches it as a PNG. It appears first in the library, so the shipped floor can be viewed and exported like any other pattern. It turns out to be **staggered planks in greyscale**, which independently confirms the greyscale-plus-tint design. Selecting it and assigning simply resets the court, and costs no slot.
+**Stock floor as a template.** On first run the window decodes `txt_bounce_parquet01_D` out of the game — from `sharedassets1.assets.original_backup` when one exists, so a previously applied pattern can't be mistaken for the original — and caches it as a PNG. The cache is never shipped with the app: it is game art, so it has to come from the user's own install. Extraction (`extract_stock_pattern()`) needs nothing but a game path — it matches path ID 1760, falling back to the texture name — so the template survives a failed donor probe, and with no game folder configured the entry is simply absent rather than faked. It appears first in the library, so the shipped floor can be viewed and exported like any other pattern. It turns out to be **staggered planks in greyscale**, which independently confirms the greyscale-plus-tint design. Selecting it and assigning simply resets the court, and costs no slot.
 
 **Export for editing.** Any pattern, the stock floor included, exports to a 512×512 PNG. An optional 2×2 sheet (1024×1024) writes four copies tiled together so seams at the tile edge are obvious while editing — crop back to a single 512 quadrant before re-importing. The export dialog restates the three rules: 512×512, greyscale, seamless.
 

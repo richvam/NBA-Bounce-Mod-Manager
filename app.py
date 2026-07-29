@@ -53,6 +53,7 @@ from PIL import Image, ImageTk, ImageGrab
 import UnityPy
 from audio_manager import AudioManagerFrame, THEMES
 import retro_eras
+import sprite_crop
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
@@ -382,7 +383,7 @@ def _get_encode_format(original_format_id):
             return TF.RGBA32, TF.RGBA32.value
 
 
-def apply_single_mod(assets_path, path_id, replacement_png_path):
+def apply_single_mod(assets_path, path_id, replacement_png_path, ress_reset=None):
     """
     IN-PLACE BINARY PATCH — the only reliable method that prevents data loss.
 
@@ -395,6 +396,15 @@ def apply_single_mod(assets_path, path_id, replacement_png_path):
     - 1bpp formats stay 1bpp  (DXT5/BC7 family)
     - 0.5bpp formats stay 0.5bpp (DXT1 family)
     The serialized object byte count stays identical -> in-place patch works for ALL sizes.
+
+    ress_reset: set of .resS paths already rewound to their backup during this
+    apply run. Every texture in this game is streamed, so pixel bytes are
+    appended to the .resS and the object points at that offset. The .resS may
+    only be rewound ONCE per run -- rewinding it per mod (as this used to) drops
+    the bytes of every mod applied before it in the same file, leaving those
+    textures pointing at a stale offset, often past the new end of file, which
+    the game renders as a garbled or half-missing image. Pass a shared set when
+    applying several mods; None means "this is a one-off" and rewinds.
     """
     from UnityPy.export.Texture2DConverter import image_to_texture2d
     from UnityPy.streams.EndianBinaryWriter import EndianBinaryWriter
@@ -423,10 +433,17 @@ def apply_single_mod(assets_path, path_id, replacement_png_path):
     enc_bytes, _ = image_to_texture2d(new_image, encode_fmt)
 
     if has_ress:
-        # Restore .resS from backup so we always append to a clean base
-        ress_bak = ress_path + BACKUP_SUFFIX
-        if os.path.exists(ress_bak):
-            shutil.copy2(ress_bak, ress_path)
+        # Rewind .resS to its backup so we append to a clean base -- but only the
+        # first time this run touches this .resS, or we'd throw away the bytes of
+        # every mod already applied to the same file (see docstring).
+        if ress_reset is None:
+            ress_reset = set()
+        ress_key = os.path.abspath(ress_path)
+        if ress_key not in ress_reset:
+            ress_bak = ress_path + BACKUP_SUFFIX
+            if os.path.exists(ress_bak):
+                shutil.copy2(ress_bak, ress_path)
+            ress_reset.add(ress_key)
 
         ress_size_before = os.path.getsize(ress_path)
         with open(ress_path, 'ab') as rf:
@@ -473,6 +490,34 @@ def apply_single_mod(assets_path, path_id, replacement_png_path):
 
     with open(assets_path, "wb") as f:
         f.write(file_bytes)
+
+
+def revert_object_from_backup(assets_path, path_id):
+    """Restore ONE object's serialized bytes from the .assets backup, in place.
+
+    Used when a mod is removed: the texture (and the sprite crop repaired
+    alongside it) goes back to stock without disturbing any other mod in the same
+    file. Object layout is identical between backup and live file -- every patch
+    this app makes is size-neutral -- so the byte range can be copied straight
+    across.
+    """
+    bak = assets_path + BACKUP_SUFFIX
+    if not os.path.exists(bak):
+        return False
+    env = UnityPy.load(assets_path)
+    target = next((o for o in env.objects if o.path_id == path_id), None)
+    if target is None:
+        return False
+    start, size = target.byte_start, target.byte_size
+    with open(bak, "rb") as f:
+        f.seek(start)
+        original = f.read(size)
+    if len(original) != size:
+        return False
+    with open(assets_path, "r+b") as f:
+        f.seek(start)
+        f.write(original)
+    return True
 
 
 def get_companion_files(assets_path):
@@ -1200,7 +1245,44 @@ class ModManagerApp(tk.Tk):
             self.notebook, "🎨 Court Colors", "🎨", "Court Colors",
             "Recolor each team's floor and court lines.",
             self._open_court_colors_dialog)
+        self._build_saves_tab(self.notebook)
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+
+    # ── Saves tab ─────────────────────────────────────────────────────────────
+    def _build_saves_tab(self, notebook):
+        """Unlock cosmetics by editing the player's .sav.
+
+        Lives in save_tab.py + save_manager.py, which are self-contained: they
+        import nothing from this file and never call apply_single_mod(). They
+        touch no .assets file at all -- only the game's level1 scene (read-only,
+        to build the unlockable catalog) and the save in AppData\\LocalLow.
+        Imported lazily so a missing or broken module degrades to a message
+        instead of blocking startup.
+        """
+        tab = ttk.Frame(notebook, style="TFrame")
+        notebook.add(tab, text="💾 Saves")
+        self.saves_tab = tab
+        try:
+            from save_tab import SaveTab
+            self.save_frame = SaveTab(
+                tab, self.cfg.get("game_data_path", ""), host=self, theme={
+                    "bg":     self.C["bg"],
+                    "panel":  self.C["panel"],
+                    "accent": self.C["accent"],
+                    "text":   self.C["text"],
+                    "muted":  self.C["sub"],
+                    "entry":  self.C["ebg"],
+                    "gold":   self.C["gold"],
+                    "red":    self.C["hi"],
+                })
+            self.save_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.save_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
+                     justify="left",
+                     text=f"Saves tab unavailable:\n{e}\n\nsave_tab.py and "
+                          f"save_manager.py should sit in the same folder as "
+                          f"app.py.").pack(anchor="w", padx=20, pady=20)
 
     # ── Home ──────────────────────────────────────────────────────────────────
     def _build_home_tab(self, notebook):
@@ -1230,6 +1312,8 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.sliders_tab)),
             ("🎨", "Court Colors", "Recolor each team's floor and court lines.",
              lambda: self._goto_tab(self.court_colors_tab)),
+            ("💾", "Saves", "Unlock mascots, jerseys, logos, balls, and trails.",
+             lambda: self._goto_tab(self.saves_tab)),
         ]
         for i, (icon, title, desc, command) in enumerate(card_defs):
             self._build_home_card(cards, icon, title, desc, command).grid(
@@ -1423,6 +1507,13 @@ class ModManagerApp(tk.Tk):
             save_config(self.cfg)
             os.makedirs(self.cfg["mods_folder"], exist_ok=True)
             self.mods_meta = load_mods_meta(self.cfg["mods_folder"])
+            # Saves tab reads the unlockable catalog out of the game folder, so
+            # it needs to hear about a game-path change too.
+            if getattr(self, "save_frame", None) is not None:
+                try:
+                    self.save_frame.set_game_data_path(self.cfg["game_data_path"])
+                except Exception:
+                    pass
             dlg.destroy(); self._load_textures_async()
 
         ttk.Button(dlg, text="Save & Reload", style="Accent.TButton", command=save).grid(row=5, column=0, columnspan=3, pady=16)
@@ -1534,7 +1625,14 @@ class ModManagerApp(tk.Tk):
         if idx >= len(self.filtered_textures): return
         self.selected_texture = t = self.filtered_textures[idx]
         sz = f"{t['width']}×{t['height']}" if t['width'] else "unknown size"
-        self.info_var.set(f"{t['name']}  |  {sz}  |  {t['format']}  |  {os.path.basename(t['assets_file'])}")
+        info = f"{t['name']}  |  {sz}  |  {t['format']}  |  {os.path.basename(t['assets_file'])}"
+
+        # How the sprite in front of this texture crops it -- the reason a
+        # replacement logo can come out cut off even when it lined up in
+        # Photoshop. Indexing a file reads all its sprites, so do it off-thread.
+        self._crop_report = None
+        threading.Thread(target=self._load_crop_report, args=(t,), daemon=True).start()
+        self.info_var.set(info)
 
         self._orig_img = None
         self.orig_canvas.delete("all")
@@ -1551,6 +1649,51 @@ class ModManagerApp(tk.Tk):
             self.mod_canvas.delete("all")
             self.mod_canvas.create_text(160, 160, text="No mod set", fill="#555", font=("Segoe UI",10))
         self._redraw_previews()
+
+    def _load_crop_report(self, t):
+        """Off-thread: fetch the sprite crop for t and fold it into the info line."""
+        try:
+            report = sprite_crop.crop_report(t["assets_file"], t["path_id"])
+        except Exception:
+            return
+
+        def done():
+            if self.selected_texture is not t:
+                return          # selection moved on while we were indexing
+            self._crop_report = report
+            note = sprite_crop.describe(report)
+            if note:
+                self.info_var.set(self.info_var.get() + f"  |  {note}")
+            self._redraw_previews()
+        self.after(0, done)
+
+    def _draw_crop_outline(self):
+        """Outline the sprite's crop box on the Original preview.
+
+        Anything the replacement puts outside this box is what the game throws
+        away today; on Apply the box is widened to the full canvas, so this is
+        also a picture of how much the old logo was actually using.
+        """
+        report = getattr(self, "_crop_report", None)
+        if not report or report["status"] == "none" or not self._orig_img:
+            return
+        img_w, img_h = self._orig_img.size
+        if not img_w or not img_h:
+            return
+        cw = self.orig_canvas.winfo_width()  or 320
+        ch = self.orig_canvas.winfo_height() or 320
+        scale = min(cw / img_w, ch / img_h, 1.0)
+        draw_w, draw_h = img_w * scale, img_h * scale
+        left, top = (cw - draw_w) / 2, (ch - draw_h) / 2
+        for s in report["sprites"]:
+            if s["full"]:
+                continue
+            x, y, w, h = s["rect"]
+            # Sprite rects are bottom-left origin; canvas y grows downward.
+            self.orig_canvas.create_rectangle(
+                left + x * scale, top + (img_h - y - h) * scale,
+                left + (x + w) * scale, top + (img_h - y) * scale,
+                outline=self.C["hi"], dash=(4, 3), width=2)
 
     def _load_orig_preview(self, t):
         try:
@@ -1581,6 +1724,7 @@ class ModManagerApp(tk.Tk):
             cw,ch = self.orig_canvas.winfo_width() or 320, self.orig_canvas.winfo_height() or 320
             self.orig_canvas.delete("all")
             self.orig_canvas.create_image(cw//2, ch//2, image=self._orig_photo, anchor="center")
+            self._draw_crop_outline()
         if self._mod_img:
             f = self._fit_image(self._mod_img, self.mod_canvas)
             self._mod_photo = ImageTk.PhotoImage(f)
@@ -1622,6 +1766,26 @@ class ModManagerApp(tk.Tk):
         try:   self._mod_img = Image.open(dest).convert("RGBA")
         except: self._mod_img = None
         self._redraw_previews(); self._refresh_tree_row()
+
+        # An atlas texture is the one case the crop can't be widened -- each
+        # sprite's rect is a real sub-region -- so say so while the artwork can
+        # still be changed.
+        try:
+            report = sprite_crop.crop_report(t["assets_file"], t["path_id"])
+        except Exception:
+            report = {"status": "none", "sprites": []}
+        if report["status"] == "atlas":
+            rects = "\n".join(
+                f"  • {s['name']}: {s['rect'][2]:.0f}×{s['rect'][3]:.0f} at "
+                f"({s['rect'][0]:.0f}, {s['rect'][1]:.0f})"
+                for s in report["sprites"])
+            messagebox.showwarning(
+                "Texture is a sprite atlas",
+                f"'{t['name']}' is shared by {len(report['sprites'])} sprites, each "
+                f"drawing its own region of the image:\n\n{rects}\n\n"
+                "Those regions can't be widened without moving the other sprites' "
+                "artwork, so keep your replacement's content inside them "
+                "(measured from the BOTTOM-left corner in Photoshop's terms).")
         self.status_var.set(f"✅ Mod saved for '{t['name']}'. Click 'Apply All Mods' to write to game.")
 
     def _remove_mod(self):
@@ -1633,11 +1797,26 @@ class ModManagerApp(tk.Tk):
         mod = self.mods_meta.pop(key)
         if os.path.exists(mod["png_path"]): os.remove(mod["png_path"])
         save_mods_meta(self.cfg["mods_folder"], self.mods_meta)
+
+        # Put this texture and its sprite back to stock right away. Without it the
+        # texture would keep pointing at appended .resS bytes that the next Apply
+        # rewinds away, and the sprite would keep the widened crop.
+        reverted = 0
+        try:
+            if revert_object_from_backup(mod["assets_file"], mod["path_id"]):
+                reverted += 1
+            for s in sprite_crop.sprite_index(mod["assets_file"]).get(mod["path_id"], []):
+                if revert_object_from_backup(mod["assets_file"], s["sprite_path_id"]):
+                    reverted += 1
+        except Exception:
+            reverted = 0        # non-fatal: Restore Textures still puts it right
+
         self._mod_img = None
         self.mod_canvas.delete("all")
         self.mod_canvas.create_text(160, 160, text="No mod set", fill="#555", font=("Segoe UI",10))
         self._refresh_tree_row()
-        self.status_var.set(f"✅ Mod removed for '{t['name']}'.")
+        self.status_var.set(f"✅ Mod removed for '{t['name']}'."
+                            + (f" Reverted {reverted} object(s) in the game file." if reverted else ""))
 
     def _refresh_tree_row(self):
         sel = self.tree.selection()
@@ -1658,20 +1837,38 @@ class ModManagerApp(tk.Tk):
             "Original files will be backed up automatically (once).\n\nContinue?"): return
         self.status_var.set("Applying mods… please wait."); self.update_idletasks()
         errors, backed_up, applied = [], [], 0
+        warnings, uncropped = [], 0
+        # Shared across the whole run: each .resS may only be rewound once, or
+        # earlier mods in the same file lose their appended pixel bytes.
+        ress_reset = set()
         for key, mod in self.mods_meta.items():
             af, png, pid = mod["assets_file"], mod["png_path"], mod["path_id"]
             if not os.path.exists(af):  errors.append(f"File not found: {af}"); continue
             if not os.path.exists(png): errors.append(f"Mod PNG missing: {png}"); continue
             if ensure_backup(af): backed_up.append(os.path.basename(af))
             try:
-                apply_single_mod(af, pid, png); applied += 1
+                apply_single_mod(af, pid, png, ress_reset=ress_reset); applied += 1
             except Exception as e:
                 errors.append(f"{mod['name']}: {e}")
+                continue
+            # Widen the Sprite that fronts this texture to the whole canvas,
+            # otherwise it keeps showing only the old logo's tight crop and the
+            # replacement comes out cut off. See sprite_crop.py.
+            try:
+                n, notes = sprite_crop.uncrop_texture_sprites(af, pid)
+                uncropped += n
+                warnings += [f"{mod['name']}: {note}" for note in notes]
+            except Exception as e:
+                warnings.append(f"{mod['name']}: sprite crop not repaired ({e})")
         msg = f"✅ Applied {applied}/{count} mods."
+        if uncropped: msg += f" Un-cropped {uncropped} sprite(s)."
         if backed_up: msg += f" Backed up: {', '.join(backed_up)}."
         if errors:
             msg += f" ⚠ {len(errors)} error(s)."
             messagebox.showwarning("Some mods failed", "\n".join(errors))
+        if warnings:
+            msg += f" ⚠ {len(warnings)} warning(s)."
+            messagebox.showwarning("Sprite crop notes", "\n\n".join(warnings))
         self.status_var.set(msg)
 
     def _restore_all(self):

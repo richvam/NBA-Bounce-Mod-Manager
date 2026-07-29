@@ -20,6 +20,7 @@ or run standalone for testing:
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -474,9 +475,14 @@ if __name__ == "__main__":
     import json
     here = os.path.dirname(os.path.abspath(__file__))
     cfg = os.path.join(here, "config.json")
-    path = (json.load(open(cfg, encoding="utf-8"))["game_data_path"]
-            if os.path.exists(cfg)
-            else r"I:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data")
+    path = ""
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+    elif os.path.exists(cfg):
+        path = json.load(open(cfg, encoding="utf-8")).get("game_data_path", "")
+    if not path or not os.path.isdir(path):
+        sys.exit("Pass your NBA Bounce_Data folder as an argument, or set the Game "
+                 "Data Folder in the Mod Manager's Settings first.")
     root = tk.Tk()
     root.title("NBA Bounce \u2014 Gameplay Sliders")
     root.geometry("940x780")

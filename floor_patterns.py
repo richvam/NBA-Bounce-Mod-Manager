@@ -255,15 +255,69 @@ STOCK_CACHE = os.path.join(CACHE_DIR, "stock_parquet.png")
 STOCK_NOTE = ("The floor NBA Bounce ships with -- staggered planks, greyscale. "
               "Decoded straight out of the game, so it's the best starting point "
               "for editing. Assigning it just resets the court and costs no slot.")
+STOCK_TEXTURE_NAME = "txt_bounce_parquet01_D"
 
 
-def library():
+def extract_stock_pattern(game_path, force=False):
+    """Decode the game's own floor texture to STOCK_CACHE. Returns True on success.
+
+    The cache is NOT shipped with the app -- it is game art, so it has to come
+    out of the user's own install. This is deliberately standalone: it needs
+    nothing but a game path, so the stock floor is available even when the full
+    donor probe in FloorPatternManager.discover() can't complete.
+
+    Reads the pristine backup when one exists, so a pattern applied earlier can't
+    be mistaken for the original. Matches on path_id first and falls back to the
+    texture name, in case a game patch renumbers objects.
+    """
+    if not force and os.path.exists(STOCK_CACHE):
+        return True
+    if not game_path or not os.path.isdir(game_path):
+        return False
+
+    src = os.path.join(game_path, MAT_FILE)
+    bak = src + ".original_backup"
+    if os.path.exists(bak):
+        src = bak
+    if not os.path.exists(src):
+        return False
+
+    try:
+        env = UnityPy.load(src)
+        textures = [o for o in env.objects if getattr(o.type, "name", "") == "Texture2D"]
+        by_path_id = [o for o in textures if int(o.path_id) == STOCK_PATHID]
+        by_name = [o for o in textures if o.peek_name() == STOCK_TEXTURE_NAME]
+        for o in by_path_id + by_name:
+            img = o.read().image
+            if img is not None:
+                _save_stock(img)
+                return True
+    except Exception:
+        pass                # non-fatal: the library just won't offer the entry
+    return False
+
+
+def _save_stock(img):
+    img = img.convert("RGBA")
+    if img.size != (S, S):
+        img = img.resize((S, S), Image.LANCZOS)
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    img.save(STOCK_CACHE)
+
+
+def stock_available(game_path=None):
+    """True if the stock floor can be shown -- cached already, or extractable."""
+    return os.path.exists(STOCK_CACHE) or extract_stock_pattern(game_path)
+
+
+def library(game_path=None):
     """[(key, label, note, is_custom)].
 
-    The stock game floor comes first when it has been extracted, then the
-    built-in designs, then anything the user has imported."""
+    The stock game floor comes first when it is available, then the built-in
+    designs, then anything the user has imported. Pass game_path and it will be
+    extracted from the game on demand rather than silently omitted."""
     out = []
-    if os.path.exists(STOCK_CACHE):
+    if stock_available(game_path):
         out.append((STOCK_KEY, "Stock Parquet (game original)", STOCK_NOTE, False))
     out += [(k, lab, note, False) for k, lab, note, _fn in BUILTIN]
     if os.path.isdir(CUSTOM_DIR):
@@ -274,10 +328,15 @@ def library():
     return out
 
 
-def pattern_image(key):
+def pattern_image(key, game_path=None):
     """512x512 RGBA. Built-ins are generated then disk-cached; customs and the
     extracted stock floor are loaded from disk."""
     if key == STOCK_KEY:
+        if not stock_available(game_path):
+            raise FileNotFoundError(
+                "The stock floor is extracted from your copy of the game and "
+                "isn't cached yet. Set the Game Data Folder in Settings, then "
+                "reopen Floor Patterns.")
         return Image.open(STOCK_CACHE).convert("RGBA")
     if key.startswith("custom:"):
         p = os.path.join(CUSTOM_DIR, key.split(":", 1)[1] + ".png")
@@ -295,13 +354,13 @@ def pattern_image(key):
     raise KeyError(key)
 
 
-def export_pattern(key, dest_path, tiled=False):
+def export_pattern(key, dest_path, tiled=False, game_path=None):
     """Save a pattern as an editable 512x512 PNG.
 
     tiled=True writes a 2x2 (1024x1024) sheet instead, which makes seams at the
     tile edge obvious while editing. Crop back to any single 512 quadrant before
     re-importing."""
-    im = pattern_image(key).convert("RGBA")
+    im = pattern_image(key, game_path).convert("RGBA")
     if tiled:
         sheet = Image.new("RGBA", (S * 2, S * 2))
         for r in range(2):
@@ -314,9 +373,9 @@ def export_pattern(key, dest_path, tiled=False):
     return dest_path
 
 
-def tiled_preview(key, tint=(0.851, 0.621, 0.447), reps=3, size=384):
+def tiled_preview(key, tint=(0.851, 0.621, 0.447), reps=3, size=384, game_path=None):
     """What the pattern looks like repeated, with the court's _Color_Parquet applied."""
-    im = pattern_image(key)
+    im = pattern_image(key, game_path)
     t = Image.new("RGBA", (S * reps, S * reps))
     for r in range(reps):
         for c in range(reps):
@@ -487,33 +546,14 @@ class FloorPatternManager:
             progress(f"{len(self.courts)} courts, {len(self.donors)} slots")
         return self
 
-    def _extract_stock(self, env, progress=None):
-        """Decode the shipped floor texture once and cache it as a PNG, so it can
-        be previewed and exported as an editing template. Read from the backup
-        when one exists, so a previously applied pattern can't be mistaken for
-        the original."""
+    def _extract_stock(self, env=None, progress=None):
+        """Cache the shipped floor texture as a PNG, so it can be previewed and
+        exported as an editing template. See extract_stock_pattern()."""
         if os.path.exists(STOCK_CACHE):
             return
-        try:
-            if progress:
-                progress("Extracting the stock floor texture ...")
-            src = env
-            bak = os.path.join(self.game_path, MAT_FILE + ".original_backup")
-            if os.path.exists(bak):
-                src = UnityPy.load(bak)
-            for o in src.objects:
-                if getattr(o.type, "name", "") != "Texture2D":
-                    continue
-                if int(o.path_id) != STOCK_PATHID:
-                    continue
-                img = o.read().image
-                if img is None:
-                    return
-                os.makedirs(CACHE_DIR, exist_ok=True)
-                img.convert("RGBA").save(STOCK_CACHE)
-                return
-        except Exception:
-            pass            # non-fatal: the library just won't offer the stock entry
+        if progress:
+            progress("Extracting the stock floor texture ...")
+        extract_stock_pattern(self.game_path)
 
     @property
     def max_slots(self):
@@ -542,7 +582,7 @@ class FloorPatternManager:
             if progress:
                 progress(f"Encoding {key} -> {donor} ...")
             info = self.donors[donor]
-            data = encode_dxt1_mipchain(pattern_image(key))
+            data = encode_dxt1_mipchain(pattern_image(key, self.game_path))
             if len(data) != info["size"]:
                 raise RuntimeError(f"{key}: encoded {len(data)} bytes, slot is {info['size']}")
             j.write(os.path.join(self.game_path, info["res"]), info["offset"], data)
@@ -772,11 +812,21 @@ if HAVE_TK:
       # -- data --------------------------------------------------------------
       def _discover_async(self):
           def work():
+              # Cache the stock floor first and on its own. It isn't shipped with
+              # the app (it's game art), and the gallery should still be able to
+              # offer it as a template even if the donor probe below fails.
+              try:
+                  if not os.path.exists(STOCK_CACHE):
+                      self.after(0, self._status, "Extracting the stock floor texture ...")
+                      extract_stock_pattern(self.game_path)
+              except Exception:
+                  pass
               try:
                   self.mgr.discover(progress=lambda m: self.after(0, self._status, m))
                   self.after(0, self._populate)
               except Exception as ex:
                   self.after(0, lambda: self._status(f"ERROR: {ex}"))
+                  self.after(0, self._build_gallery)   # patterns are still usable
           threading.Thread(target=work, daemon=True).start()
 
       def _status(self, msg):
@@ -796,7 +846,7 @@ if HAVE_TK:
       def _label_for(self, key):
           if not key:
               return "Stock parquet"
-          for k, lab, _n, _c in library():
+          for k, lab, _n, _c in library(self.game_path):
               if k == key:
                   return lab
           return key
@@ -805,11 +855,15 @@ if HAVE_TK:
           for w in self.gal_inner.winfo_children():
               w.destroy()
           cols = 3
-          for i, (key, label, note, is_custom) in enumerate(library()):
+          for i, (key, label, note, is_custom) in enumerate(library(self.game_path)):
               r, c = divmod(i, cols)
+              try:
+                  im = pattern_image(key, self.game_path).convert("RGB").resize(
+                      (140, 140), Image.LANCZOS)
+              except Exception:
+                  continue      # one unreadable pattern shouldn't empty the gallery
               card = ttk.Frame(self.gal_inner, style="FPPanel.TFrame", padding=6)
               card.grid(row=r, column=c, padx=5, pady=5, sticky="n")
-              im = pattern_image(key).convert("RGB").resize((140, 140), Image.LANCZOS)
               ph = ImageTk.PhotoImage(im)
               self._thumbs[key] = ph
               lbl = tk.Label(card, image=ph, bd=2, relief="flat",
@@ -840,10 +894,10 @@ if HAVE_TK:
           tint = (0.851, 0.621, 0.447)
           if self.sel_team and self.sel_team in self.mgr.courts:
               tint = self.mgr.courts[self.sel_team]["tint"]
-          im = tiled_preview(key, tint=tint, reps=3, size=352)
+          im = tiled_preview(key, tint=tint, reps=3, size=352, game_path=self.game_path)
           self._preview_img = ImageTk.PhotoImage(im)
           self.preview.configure(image=self._preview_img)
-          for k, lab, note, _c in library():
+          for k, lab, note, _c in library(self.game_path):
               if k == key:
                   who = f" -- tinted for {self.sel_team}" if self.sel_team else ""
                   self.pv_caption.configure(text=lab + who)
@@ -982,7 +1036,8 @@ if HAVE_TK:
           if not p:
               return
           try:
-              out = export_pattern(self.sel_pattern, p, tiled=tiled)
+              out = export_pattern(self.sel_pattern, p, tiled=tiled,
+                                   game_path=self.game_path)
           except Exception as ex:
               messagebox.showerror("Export failed", str(ex), parent=self)
               return
@@ -1071,8 +1126,8 @@ if __name__ == "__main__":
     if a.selftest:
         m = FloorPatternManager(gp).discover(progress=print)
         print(f"courts={len(m.courts)} slots={m.max_slots} fileID={m.file_id}")
-        for key, lab, _n, _c in library():
-            d = encode_dxt1_mipchain(pattern_image(key))
+        for key, lab, _n, _c in library(gp):
+            d = encode_dxt1_mipchain(pattern_image(key, gp))
             print(f"  {key:<18} {len(d):>8,} bytes  "
                   f"{'OK' if len(d) == EXPECTED_SLOT_BYTES else 'SIZE MISMATCH'}")
         sys.exit(0)

@@ -6,11 +6,27 @@ mods.json
 audio_mods.json
 languages.json
 
-# ── Floor Patterns (per-user court assignments / revert journal, NOT the shipped
-#    pattern art in floor_patterns/, which must stay tracked) ─────────────────
+# ── Floor Patterns (per-user court assignments / revert journal) ─────────────
 floor_patterns.json
 floor_patterns_journal.json
 floor_patterns_journal.json.done
+
+# floor_patterns/ is a generated CACHE, not shipped art -- do not commit it.
+#   * the built-in patterns are drawn procedurally by floor_patterns.py and
+#     re-cached on demand, so committing them adds nothing
+#   * stock_parquet.png is EXTRACTED FROM THE USER'S COPY OF THE GAME, so
+#     publishing it would redistribute copyrighted game art
+#   * custom/ holds the user's own imported PNGs
+floor_patterns/
+
+# ── Saves tool ────────────────────────────────────────────────────────────────
+# Cache of the game's unlockable list, extracted from level1 and keyed on that
+# file's size + mtime. Regenerated automatically; differs per game version.
+unlockables_catalog.json
+# Save-file backups taken before an unlock (kept out of the Steam Cloud folder).
+*.sav.backup
+*.sav.bak
+save_backups/
 
 # ── Game file backups created by the app ──────────────────────────────────────
 *.original_backup

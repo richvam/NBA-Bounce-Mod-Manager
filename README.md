@@ -20,7 +20,7 @@
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
-| Saves | Unlock every cosmetic in your save file, with four safety gates and an automatic backup kept outside your Steam Cloud folder |
+| Saves | Unlock mascots, jerseys, logos, balls and trails by editing your save file |
 | Dark / Light mode | NBA-branded "Arena Night" (dark) and "Broadcast Day" (light) themes, switchable in Settings |
 | Automatic backups | Every tool backs up the original game files before its first write, and can restore them any time |
 
@@ -79,7 +79,15 @@ Select a texture to see it previewed on the right, side by side with your replac
 1. **Export Original**: save the true, unmodified texture as a PNG so you can edit it in Photoshop, GIMP, Aseprite, or any image editor
    - Your replacement doesn't need to match the original's resolution exactly, but matching it avoids any in-game stretching
 2. **Import Replacement**: pick your edited PNG. It's copied into your Mods Folder and tracked in `mods.json`; the game file isn't touched yet
-3. **Remove Mod**: clears the replacement for the selected texture
+3. **Remove Mod**: clears the replacement for the selected texture, and puts that texture back to stock in the game file without disturbing your other mods
+
+### Sprite crops
+
+Logos, icons and unlock art are drawn through a Unity **Sprite** that crops the texture down to a box around the *original* artwork — `GSWarriors_Global` only uses 514×619 of its 1024×1024 canvas. Selecting a texture outlines that box on the **Original** preview with a dashed rectangle.
+
+You don't have to design around it: Apply widens the crop to the whole canvas, so a replacement can use every pixel of the image no matter how much bigger than the old logo it is. The outline is there so you can see what the original was actually using.
+
+The one exception is a texture shared by several sprites (a real atlas — only two exist in the game). Those crops can't be widened without moving the other sprites' artwork, so importing one warns you and lists the regions your replacement has to stay inside.
 
 When you're ready to write your changes into the game, use the buttons in the top bar (available from any tab):
 
@@ -151,49 +159,53 @@ Pick a team from the dropdown, then click any color swatch to open the built-in 
 - **Reset This Team**: revert the selected team back to its original colors
 
 ---
+
 ## Saves
 
-Unlocks the cosmetics in your save file.
+Unlocks cosmetics by editing your save file directly. It touches no `.assets`
+file at all — it only reads the game's `level1` scene to work out what exists,
+and writes to your save in
+`%USERPROFILE%\AppData\LocalLow\UnfinishedPixel\NBA Bounce\`.
 
-Pick a save from the list and the tab shows every unlockable the game knows
-about, split into what you already own and what's still locked. **Apply** adds
-the locked ones.
+- **Unlock Everything**: unlock every item available in your game build
+- **Unlock Selected**: pick individual rows instead
+- **Back Up Save / Restore Backup**: timestamped copies, kept outside the synced
+  folder so they don't eat Steam Cloud quota
+- **Export Copy**: save a copy elsewhere
 
-- **Save discovery is automatic.** The tab looks for the documented folder under
-  `%USERPROFILE%\AppData\LocalLow`, then retries case-insensitively, then falls
-  back to scanning LocalLow for any folder actually containing an
-  `NBABounce*.sav`. That last step covers installs where the publisher folder has
-  been renamed. Saves are listed newest-first, and **Browse** opens in the save
-  folder rather than wherever you last were.
-- **The unlockable list is read from the game, not hardcoded.** It's extracted
-  from `level1` and cached to `unlockables_catalog.json`, keyed on that file's
-  size and modification time — so a game patch that adds items, or flips one from
-  enabled to disabled, invalidates the cache automatically.
-- **Your save is backed up first**, and the backup is written *outside* the
-  Steam Cloud folder so it doesn't eat your cloud quota.
+### ⚠ Close Steam first
 
-### Safety
+**This is the step that catches everyone.** The game uses Steam Auto-Cloud, so
+Steam re-syncs the save folder every time it launches the game. Edit a save
+while Steam is running — or with cloud sync still on — and Steam quietly puts
+the old copy back. It looks exactly like the edit did nothing.
 
-Save files are far less forgiving than texture edits: a malformed one can cost
-you your progress. Four checks run on every apply, and **any failure aborts**:
+1. Steam → NBA BOUNCE → Properties → General → uncheck **Keep game saves in the Steam Cloud**
+2. Exit Steam completely (check the tray *and* Task Manager for `steam.exe` and `steamwebhelper.exe`)
+3. Apply the edit
+4. Start Steam, launch the game, confirm your unlocks
+5. Re-enable cloud sync — Steam uploads the new save as authoritative
 
-| Gate | What it prevents |
-|---|---|
-| Input must round-trip byte-identically before any edit is made | Writing a file the parser didn't fully understand |
-| Every added ID must have `m_bEnabled == 1` | Injecting items the game has disabled |
-| Nothing you already own may be dropped | Losing existing unlocks |
-| Output must have no duplicate object IDs and no dangling references | Producing a save the game refuses to load |
+### Notes
 
-The new file is written to a temp path and moved into place with `os.replace`,
-so an abort leaves your original save untouched. Applying twice is a no-op —
-the second run finds nothing to add.
+- **Not everything is unlockable.** Of the 333 items in the game data, 34 ship
+  with their `m_bEnabled` flag turned off. Those are excluded on purpose: the
+  game's `loadUnlocks()` resolves each saved id against
+  `getUnlockablesEnabled()`, so writing a disabled id makes it throw
+  `Sequence contains no matching element` and **hang on the loading screen**.
+  The catalog is filtered on that flag and the tab refuses to write one.
+- **Nothing you own is ever removed**, including the `RANDOM_*` cosmetics the
+  game generates at runtime, which appear in no static catalog.
+- **The catalog is re-read after a game update.** It's cached in
+  `unlockables_catalog.json`, keyed on `level1`'s size and timestamp, so a patch
+  that changes which items are enabled invalidates the cache automatically.
+- **Achievements are unaffected.** Steam achievements live on Valve's servers;
+  unlocking an `ACH_*` cosmetic locally does not award one.
+- **Saves are personal, not portable.** There's no account binding, so a save
+  will load for anyone — but it also carries the owner's avatars, teams,
+  seasons and display settings. Share the tool, not the save.
 
-Items the game generates at runtime (the `RANDOM_*` cosmetics minted by
-`calculateRandomUnlockable`) aren't in the static catalog but are preserved
-verbatim, so unlocking never costs you a random drop you'd already earned.
-
-> **Note:** this tool only reads `level1` and writes your `.sav`. It never opens
-> a `.assets` file and never touches the texture-patching path.
+---
 
 ## Settings
 
@@ -213,9 +225,12 @@ Open **Settings** from the top bar at any time.
 nba-bounce-mod-manager/
 ├── app.py                              # Main app: Home / Textures / Audio tabs, Settings
 ├── audio_manager.py                    # Audio tab: playback, language tags, replacements
+├── sprite_crop.py                      # Widens baked sprite crops so replacements aren't cut off
 ├── floor_patterns.py                   # Floor Patterns tool
 ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
 ├── sliders_catalog.json / presets.json # Slider definitions and difficulty presets
+├── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
+├── unlockables_catalog.json            # Auto-generated: cached unlockable ids from level1
 ├── SETUP_AND_RUN.bat                   # First-time setup + launch
 ├── RUN.bat                             # Quick launch (after first setup)
 ├── config.json                         # Auto-generated: saved paths and theme preference
@@ -291,6 +306,7 @@ All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` i
 | **"UnityPy not installed" on launch** | Run `SETUP_AND_RUN.bat` (not `RUN.bat`) to reinstall dependencies |
 | **Game data folder not found** | Open Settings and browse to your `NBA Bounce_Data` folder |
 | **Textures look wrong / stretched in game** | Your replacement PNG should match the original's resolution |
+| **A replacement logo is cut off in game** | Fixed in v2.1.1 — click Apply Texture Mods again and the sprite crop gets widened to the full canvas. If the texture is a multi-sprite atlas, importing it lists the regions your artwork has to stay inside |
 | **Game crashes after applying** | Click Restore Textures (or Restore Audio) to revert, then check your replacement file is valid |
 | **Audio replacement doesn't seem to change anything** | Some clips stream continuously and may ignore replacement; see the note under Audio above |
 | **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Texture Mods / Apply Audio Mods again |

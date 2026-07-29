@@ -430,5 +430,6 @@ def main(root):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1
-         else r"I:\SteamLibrary\steamapps\common\NBA BOUNCE\NBA Bounce_Data")
+    if len(sys.argv) < 2:
+        sys.exit(f"usage: {os.path.basename(sys.argv[0])} <path to NBA Bounce_Data>")
+    main(sys.argv[1])
