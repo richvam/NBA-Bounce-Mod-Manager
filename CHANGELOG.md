@@ -5,6 +5,8 @@
 ### What's New
 
 - Fixed issues with cropped custom logo imports
+- Fixed court floor patterns not reaching the game
+- Fixed the court preview showing the same pattern for every court
 - Removed the exported stock court floor, which displayed without local game
   files present
 
@@ -43,7 +45,31 @@ off, cropped, or garbled in-game even though the PNG looked right in the app.
   rendered the second mod's image. Since a full team reskin touches ~17 textures
   across two files, this hit essentially every multi-texture mod.
 
-- **The stock court floor is now extracted from your own game files.** The
+- **The Preview showed the last-clicked library pattern for every court, so one
+  assignment looked like it had changed all 36.** Selecting a court re-rendered
+  whatever pattern was selected in the library, tinted for that court, and
+  captioned it with the court's name — so clicking down the court list showed the
+  same pattern on every one of them, while the list itself still (correctly) read
+  "Stock parquet". Selecting a court now previews *that court's* floor and
+  captions it `GoldenStateWarriors floor: Basketweave`; auditioning a library
+  pattern captions it `Basketweave -- previewing on DenverNuggets, not assigned to
+  it yet`. Nothing about what gets written changed: `apply()` only ever patched
+  the materials of teams in the assignment map, which the game files confirm — of
+  72 court material regions, 70 still point at the untouched stock texture.
+
+- **"Apply to game" could be pushed off the bottom of the Floor Patterns window,
+  so assignments were never written.** The right-hand panel packed top-down, and
+  the notes above the buttons wrap to a variable number of lines -- the
+  retro-court note runs four lines for a team like the Warriors. On a display
+  where that overflows the window, tkinter simply doesn't draw the last two
+  buttons, and the visible panel ends at "Import custom PNG ...". Assigning a
+  pattern still updated the court list and the `1 / 8` slot counter, so it looked
+  applied, while `floor_patterns.json` stayed empty and no journal was ever
+  written -- and the game of course loaded the stock floor. The action buttons are
+  now packed `side="bottom"` and claim their space *before* the notes, so the
+  notes are what clip on a short window, never the buttons. Assigning also says
+  "Not written yet -- click 'Apply to game'" in the status line, and closing with
+  unapplied assignments now offers to apply them. The
   exported `stock_parquet.png` used to ship with the app, so the Floor Patterns
   gallery offered "Stock Parquet (game original)" even with no game files
   present — and it was game art being redistributed. It is no longer tracked;

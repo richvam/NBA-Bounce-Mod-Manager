@@ -654,7 +654,31 @@ if HAVE_TK:
           self.configure(bg=self.T["bg"])
           self._styles()
           self._build()
+          self.on_closed = None          # set by standalone callers that own the root
+          self.protocol("WM_DELETE_WINDOW", self._on_close)
           self.after(60, self._discover_async)
+
+      def _unapplied(self):
+          """Assignments made in this window that were never written to the game."""
+          return self.assignments != dict(self.state.get("assignments", {}))
+
+      def _on_close(self):
+          """Closing with assignments that were never applied is the whole failure
+          mode this guards: the court list shows the new pattern, the game shows the
+          old one, and nothing says why."""
+          if self._unapplied():
+              answer = messagebox.askyesnocancel(
+                  "Apply floor patterns?",
+                  "Your court assignments haven't been written to the game yet.\n\n"
+                  "Apply them now?", parent=self)
+              if answer is None:
+                  return
+              if answer:
+                  self._apply(then_close=True)
+                  return
+          if self.on_closed:
+              self.on_closed()
+          self.destroy()
 
       # -- chrome ------------------------------------------------------------
       def _styles(self):
@@ -769,6 +793,41 @@ if HAVE_TK:
           self.palette_canvas = tk.Canvas(right, height=46, bg=T["bg"],
                                           highlightthickness=0)
           self.palette_canvas.pack(fill="x", pady=(4, 0))
+          # The buttons are packed side="bottom" and BEFORE the notes below them, so
+          # they get their space first and stay anchored to the bottom of the panel.
+          # Packed top-down instead, a long note -- the retro-court text runs four
+          # lines for a team like the Warriors -- pushed "Apply to game" past the
+          # bottom edge of the window, where tk simply doesn't draw it. Assigning a
+          # pattern then looked like it had taken effect (the court list and the
+          # slot counter both update) while nothing was ever written to the game.
+          actions = ttk.Frame(right, style="FP.TFrame")
+          actions.pack(side="bottom", fill="x", pady=(10, 0))
+
+          self.btn_assign = ttk.Button(actions, text="Assign to court", style="FP.TButton",
+                                       command=self._assign, state="disabled")
+          self.btn_assign.pack(fill="x", pady=2)
+          ttk.Button(actions, text="Reset court to stock floor", style="FP.TButton",
+                     command=self._unassign).pack(fill="x", pady=2)
+          self.btn_export = ttk.Button(actions, text="Export pattern for editing ...",
+                                       style="FP.TButton", command=self._export,
+                                       state="disabled")
+          self.btn_export.pack(fill="x", pady=(12, 2))
+          self.tiled_export = tk.BooleanVar(value=False)
+          tk.Checkbutton(actions, text="Export as 2x2 sheet (shows tile seams)",
+                         variable=self.tiled_export, bg=T["bg"], fg=T["muted"],
+                         selectcolor=T["entry"], activebackground=T["bg"],
+                         activeforeground=T["text"], highlightthickness=0,
+                         bd=0, anchor="w", font=("Segoe UI", 8)).pack(fill="x")
+          ttk.Button(actions, text="Import custom PNG ...", style="FP.TButton",
+                     command=self._import).pack(fill="x", pady=(6, 2))
+          self.btn_apply = ttk.Button(actions, text="Apply to game", style="FP.TButton",
+                                      command=self._apply)
+          self.btn_apply.pack(fill="x", pady=(12, 2))
+          ttk.Button(actions, text="Revert all floors", style="FPDanger.TButton",
+                     command=self._revert).pack(fill="x", pady=2)
+
+          # These wrap to a variable number of lines, so they take what's left and
+          # are the things that clip on a short window -- never the buttons.
           self.variant_note = ttk.Label(right, text="", style="FP.TLabel",
                                         foreground=T["muted"], wraplength=352,
                                         justify="left", font=("Segoe UI", 8))
@@ -780,28 +839,6 @@ if HAVE_TK:
           self.pv_note = ttk.Label(right, text="", style="FP.TLabel", foreground=T["muted"],
                                    wraplength=352, justify="left")
           self.pv_note.pack(anchor="w", pady=(0, 10))
-
-          self.btn_assign = ttk.Button(right, text="Assign to court", style="FP.TButton",
-                                       command=self._assign, state="disabled")
-          self.btn_assign.pack(fill="x", pady=2)
-          ttk.Button(right, text="Reset court to stock floor", style="FP.TButton",
-                     command=self._unassign).pack(fill="x", pady=2)
-          self.btn_export = ttk.Button(right, text="Export pattern for editing ...",
-                                       style="FP.TButton", command=self._export,
-                                       state="disabled")
-          self.btn_export.pack(fill="x", pady=(12, 2))
-          self.tiled_export = tk.BooleanVar(value=False)
-          tk.Checkbutton(right, text="Export as 2x2 sheet (shows tile seams)",
-                         variable=self.tiled_export, bg=T["bg"], fg=T["muted"],
-                         selectcolor=T["entry"], activebackground=T["bg"],
-                         activeforeground=T["text"], highlightthickness=0,
-                         bd=0, anchor="w", font=("Segoe UI", 8)).pack(fill="x")
-          ttk.Button(right, text="Import custom PNG ...", style="FP.TButton",
-                     command=self._import).pack(fill="x", pady=(6, 2))
-          ttk.Button(right, text="Apply to game", style="FP.TButton",
-                     command=self._apply).pack(fill="x", pady=(12, 2))
-          ttk.Button(right, text="Revert all floors", style="FPDanger.TButton",
-                     command=self._revert).pack(fill="x", pady=2)
 
       def _wheel(self, e):
           try:
@@ -885,7 +922,16 @@ if HAVE_TK:
                   return key
           return retro_eras.DEFAULT_VARIANT
 
-      def _select_pattern(self, key):
+      def _select_pattern(self, key, showing_court_floor=False):
+          """Draw `key` in the preview.
+
+          showing_court_floor says the preview is the selected court's actual
+          floor rather than a pattern being auditioned. The caption has to make
+          that difference obvious: previewing a library pattern tinted for
+          whichever court happens to be selected reads as though that court
+          already has the pattern, which is how a single assignment could look
+          like it had changed every court.
+          """
           self.sel_pattern = key
           # The wood is multiplied by the material's _Color_Parquet and nothing
           # else. Do NOT substitute a court colour here: those are surface and
@@ -897,10 +943,18 @@ if HAVE_TK:
           im = tiled_preview(key, tint=tint, reps=3, size=352, game_path=self.game_path)
           self._preview_img = ImageTk.PhotoImage(im)
           self.preview.configure(image=self._preview_img)
+          assigned = self.assignments.get(self.sel_team) if self.sel_team else None
           for k, lab, note, _c in library(self.game_path):
               if k == key:
-                  who = f" -- tinted for {self.sel_team}" if self.sel_team else ""
-                  self.pv_caption.configure(text=lab + who)
+                  if showing_court_floor:
+                      caption = f"{self.sel_team} floor: {lab}"
+                  elif self.sel_team and assigned != key:
+                      caption = f"{lab} -- previewing on {self.sel_team}, not assigned to it yet"
+                  elif self.sel_team:
+                      caption = f"{self.sel_team} floor: {lab}"
+                  else:
+                      caption = lab
+                  self.pv_caption.configure(text=caption)
                   self.pv_note.configure(text=note)
           self.btn_assign.configure(state="normal" if self.sel_team else "disabled")
           self.btn_export.configure(state="normal")
@@ -960,7 +1014,15 @@ if HAVE_TK:
           sel = self.tree.selection()
           self.sel_team = sel[0] if sel else None
           self._refresh_variants()
-          if self.sel_pattern:
+          # Show the court its OWN floor, not whatever was last clicked in the
+          # library. Carrying the library pick across every court made one
+          # assignment look like it had been applied to all 36 of them.
+          floor = self.assignments.get(self.sel_team) if self.sel_team else None
+          if floor is None and self.sel_team and stock_available(self.game_path):
+              floor = STOCK_KEY
+          if floor:
+              self._select_pattern(floor, showing_court_floor=True)
+          elif self.sel_pattern:
               self._select_pattern(self.sel_pattern)
           self.btn_assign.configure(state="normal" if (self.sel_team and self.sel_pattern)
                                     else "disabled")
@@ -1011,6 +1073,7 @@ if HAVE_TK:
           self.assignments = prospective
           self.tree.set(self.sel_team, "pat", self._label_for(self.sel_pattern))
           self._refresh_slots()
+          self._pending(f"{self._label_for(self.sel_pattern)} assigned to {self.sel_team}")
 
       def _unassign(self):
           if not self.sel_team:
@@ -1018,6 +1081,12 @@ if HAVE_TK:
           self.assignments.pop(self.sel_team, None)
           self.tree.set(self.sel_team, "pat", "Stock parquet")
           self._refresh_slots()
+          self._pending(f"{self.sel_team} reset to the stock floor")
+
+      def _pending(self, what):
+          """Assigning only changes this window -- say so, so it can't be mistaken
+          for a change that reached the game."""
+          self._status(f"{what}. Not written yet -- click 'Apply to game'.")
 
       def _export(self):
           """Save the selected pattern as an editable PNG."""
@@ -1070,8 +1139,9 @@ if HAVE_TK:
           self._status(f"Imported {os.path.basename(p)} -- greyscale images work best, "
                        f"since the court colour is multiplied over the pattern.")
 
-      def _apply(self):
+      def _apply(self, then_close=False):
           if not self.mgr.loaded:
+              self._status("Still reading the game files -- try again in a moment.")
               return
           self.btn_assign.configure(state="disabled")
 
@@ -1079,11 +1149,13 @@ if HAVE_TK:
               try:
                   n, _slots = self.mgr.apply(self.assignments,
                                              progress=lambda m: self.after(0, self._status, m))
-                  self.state["assignments"] = self.assignments
+                  self.state["assignments"] = dict(self.assignments)
                   save_state(self.state)
                   self.after(0, lambda: messagebox.showinfo(
                       "Applied", f"{n} courts updated.\n\nRestart the game to see the change.",
                       parent=self))
+                  if then_close:
+                      self.after(0, self._on_close)
               except Exception as ex:
                   self.after(0, lambda: messagebox.showerror("Apply failed", str(ex), parent=self))
           threading.Thread(target=work, daemon=True).start()
@@ -1134,5 +1206,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
     w = open_floor_patterns(root, gp)
-    w.protocol("WM_DELETE_WINDOW", root.destroy)
+    w.on_closed = root.destroy      # window's own handler prompts, then calls this
     root.mainloop()
