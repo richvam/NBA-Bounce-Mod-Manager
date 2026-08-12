@@ -611,7 +611,8 @@ class MeshTab(tk.Frame):
 
         prepared = self._prepare_import(geo, options)
         try:
-            stored = mm.store_replacement(mods_folder, path, self.selected["name"])
+            stored = mm.store_replacement(mods_folder, path, self.selected["name"],
+                                          self.selected["path_id"])
         except Exception as exc:
             messagebox.showerror("Import failed", f"Couldn't copy the model into "
                                                   f"your mods folder:\n{exc}")

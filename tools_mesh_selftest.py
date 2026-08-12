@@ -15,7 +15,9 @@ Covers the parts that are easy to get quietly wrong:
      same byte size as the object it replaces;
   4. the .resS append/rewind bookkeeping, against real files on disk -- the
      shared stream file is rewound once per apply run, not once per mod;
-  5. bone weights transfer to a replacement that has none.
+  5. bone weights transfer to a replacement that has none, end to end: a
+     skinned mesh's original data is read out of a .resS, an unrigged
+     replacement is written back, and the result is decoded again.
 
 Sections 2-5 need UnityPy; they're skipped with a note if it isn't installed.
 The 3D viewer isn't exercised here (it needs a display); run `python mesh_tab.py`
@@ -344,6 +346,7 @@ class _FakeObject:
         self.byte_size = byte_size
         self.version = VERSION
         self.reader = _FakeReader()
+        self.assets_file = None      # only read when resolving streamed data
         self.type = type("T", (), {"name": "Mesh"})()
 
     def read(self):
@@ -475,6 +478,114 @@ def test_stream_writeback():
         UnityPy.load, TypeTreeHelper.write_typetree = real_load, real_write
 
 
+def test_streamed_skin_replacement():
+    """The whole trip for a skinned, streamed mesh: original vertex data read
+    out of a .resS, a replacement written back into it, and the result decoded
+    again -- which is what actually happens to a player model."""
+    print("\nStreamed skinned mesh, end to end")
+    try:
+        import UnityPy
+        from UnityPy.helpers import MeshHelper, TypeTreeHelper
+        from UnityPy.helpers.MeshHelper import MeshHandler
+    except ImportError:
+        SKIP.append("streamed skinned replacement")
+        print("  SKIP  UnityPy isn't installed")
+        return
+
+    folder = tempfile.mkdtemp(prefix="mesh_selftest_skin_")
+    assets = os.path.join(folder, "sharedassets1.assets")
+    ress = assets + ".resS"
+
+    geo = sample_sphere(segments=16, rings=12)
+    original = geo.copy()
+    original.bone_weights = [(1.0, 0.0, 0.0, 0.0)] * geo.vertex_count
+    original.bone_indices = [(2, 5, 0, 0)] * geo.vertex_count
+
+    mesh = _fake_unity_mesh(geo, skinned=True)
+    mesh.m_Name = "player_body"
+    channels = list(mesh.m_VertexData.m_Channels)
+    streams = MeshHandler(mesh, version=VERSION).get_streams(channels, geo.vertex_count)
+    vertex_blob = mm._build_vertex_buffer(original, channels, streams, VERSION,
+                                          original, None, [])
+
+    filler = b"STOCKPIX" * 128
+    pad = (-len(filler)) % 16
+    stock_ress = filler + b"\0" * pad + vertex_blob
+    stock_assets = bytes(range(256)) * 40
+    for path, blob in ((assets, stock_assets), (ress, stock_ress)):
+        with open(path, "wb") as f:
+            f.write(blob)
+        with open(path + mm.BACKUP_SUFFIX, "wb") as f:
+            f.write(blob)
+
+    mesh.m_StreamData.path = "archive:/CAB-fake/sharedassets1.assets.resS"
+    mesh.m_StreamData.offset = len(filler) + pad
+    mesh.m_StreamData.size = len(vertex_blob)
+    mesh.m_VertexData.m_DataSize = b""
+    mesh.m_VertexData.m_VertexCount = geo.vertex_count
+    mesh.m_IndexBuffer = struct.pack(f"<{geo.triangle_count * 3}H",
+                                     *[i for tri in geo.triangles for i in tri])
+    mm._assign_submeshes(mesh, geo, 2, [])
+
+    obj = _FakeObject(mesh, 77, 1024, 96)
+    mesh.set_object_reader(obj)
+    env = type("Env", (), {"objects": [obj], "file": None})()
+
+    real_load = UnityPy.load
+    real_write = TypeTreeHelper.write_typetree
+    real_res = MeshHelper.get_resource_data
+    UnityPy.load = lambda *a, **k: env
+    TypeTreeHelper.write_typetree = lambda tree, node, writer, af: writer.write_bytes(
+        b"M" * 96)
+    MeshHelper.get_resource_data = lambda path, af, offset, size: \
+        open(ress, "rb").read()[offset:offset + size]
+    try:
+        loaded, info = mm.load_mesh(assets, 77)
+        check("streamed vertex data is read back out of the .resS",
+              loaded.vertex_count == geo.vertex_count
+              and max(max(abs(a - b) for a, b in zip(v1, v2))
+                      for v1, v2 in zip(loaded.vertices, geo.vertices)) < 1e-5)
+        check("the mesh reports itself as streamed and skinned",
+              info["streamed"] and info["skinned"])
+
+        budget = mm.mesh_write_info(assets, 77)
+        check("the triangle budget matches the original",
+              budget["max_triangles"] == geo.triangle_count,
+              f"{budget['max_triangles']} vs {geo.triangle_count}")
+
+        # a replacement with no rigging at all, half the size
+        replacement = geo.scaled(0.5)
+        report = mm.apply_mesh_mod(assets, 77, replacement, ress_reset=set())
+        check("a skinned mesh accepts an unrigged replacement",
+              report["method"] == "in-place")
+        check("the transfer is reported to the user",
+              any("Bone weights were transferred" in w for w in report["warnings"]))
+
+        decoded = MeshHandler(mesh, version=VERSION)
+        decoded.process()
+        check("the written mesh decodes back to the replacement",
+              decoded.m_VertexCount == replacement.vertex_count
+              and max(max(abs(a - b) for a, b in zip(got[:3], want))
+                      for got, want in zip(decoded.m_Vertices,
+                                           replacement.vertices)) < 1e-5)
+        check("bone indices survived the replacement",
+              tuple(decoded.m_BoneIndices[0]) == (2, 5, 0, 0),
+              f"got {tuple(decoded.m_BoneIndices[0])}")
+        check("bone weights survived the replacement",
+              close(decoded.m_BoneWeights[0][0], 1.0))
+        triangles = [tuple(t) for sub in decoded.get_triangles() for t in sub]
+        check("triangles survived the replacement",
+              triangles == [tuple(t) for t in replacement.triangles])
+
+        check("removing the mod puts the object back to stock",
+              mm.revert_mesh_from_backup(assets, 77)
+              and open(assets, "rb").read()[1024:1120] == stock_assets[1024:1120])
+    finally:
+        UnityPy.load = real_load
+        TypeTreeHelper.write_typetree = real_write
+        MeshHelper.get_resource_data = real_res
+
+
 def test_skin_transfer():
     print("\nSkin weight transfer")
     original = mm.MeshGeometry(
@@ -540,6 +651,7 @@ def main():
     test_unity_roundtrip()
     test_index_padding()
     test_stream_writeback()
+    test_streamed_skin_replacement()
     test_skin_transfer()
     test_validation()
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed, {len(SKIP)} skipped")

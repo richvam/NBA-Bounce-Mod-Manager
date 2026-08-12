@@ -39,12 +39,14 @@ textures and audio already were.
   vertex borrows them from the closest original vertex, so the replacement still
   follows the skeleton.
 
-- `tools_mesh_selftest.py`, 58 checks that need no copy of the game: every
+- `tools_mesh_selftest.py`, 68 checks that need no copy of the game: every
   exporter/importer round-trip, the vertex buffer this app writes decoded back
   by UnityPy's own mesh reader over a full Unity 6 channel layout (packed
   colours and bone weights included), index padding, submesh windows, the
-  .resS append/rewind bookkeeping against real files on disk, and the
-  bone-weight transfer.
+  .resS append/rewind bookkeeping against real files on disk, and a full
+  round trip for a streamed skinned mesh -- original vertex data read out
+  of a .resS, an unrigged replacement written back, decoded again, then
+  reverted from the backup.
 
 - `MESH_MODDING_GUIDE.md` with the modelling rules, the budget explanation and a
   troubleshooting table.

@@ -182,7 +182,8 @@ class MeshView(tk.Frame):
             self._spin_step()
 
     def _spin_step(self):
-        if not self.spin:
+        # the timer outlives the widget if the window closes mid-spin
+        if not self.spin or not self.winfo_exists():
             return
         self.yaw += math.radians(2.0)
         self.render(interactive=True)

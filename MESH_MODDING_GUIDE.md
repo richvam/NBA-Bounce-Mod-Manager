@@ -207,7 +207,7 @@ mesh mod (it doesn't undo anything already written — use Restore for that).
 python tools_mesh_selftest.py
 ```
 
-Runs 58 checks: every exporter and importer round-trip, the vertex buffer this
+Runs 68 checks: every exporter and importer round-trip, the vertex buffer this
 app writes decoded back by UnityPy's own mesh reader (a full Unity 6 channel
 layout, including packed colours and bone weights), the index padding and submesh
 windows, the .resS offset bookkeeping against real files on disk, and the

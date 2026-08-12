@@ -890,7 +890,9 @@ def load_mesh(assets_path, path_id, prefer_backup=True):
     info["path_id"]     = path_id
     info["assets_file"] = assets_path
 
-    handler = MeshHandler(mesh)
+    # pass the version explicitly: MeshHandler otherwise reads it back off the
+    # object reader, which isn't attached on every code path
+    handler = MeshHandler(mesh, version=obj.version)
     handler.process()
     if not handler.m_Vertices:
         raise MeshError(f"'{info['name']}' has no readable vertex data.")
@@ -1302,6 +1304,13 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
     if not channels:
         raise MeshError(f"'{name}' has no vertex channel table to write into.")
 
+    if version[0] < 5:
+        # get_streams() below reconstructs the stream table the way Unity 5+
+        # lays it out; older files carry an explicit m_Streams array with
+        # different rules, and this game isn't one of them.
+        raise MeshError(f"'{name}' comes from a pre-Unity-5 file, which this app "
+                        f"can read but not rewrite.")
+
     use_16bit    = _uses_16bit_indices(mesh, version)
     index_stride = 2 if use_16bit else 4
     if use_16bit and geo.vertex_count > 65535:
@@ -1317,7 +1326,7 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
                       for ci, ch in enumerate(channels) if ch.dimension)
     if needs_bones and transfer_skin and not geo.bone_weights:
         try:
-            handler = MeshHandler(mesh)
+            handler = MeshHandler(mesh, version=version)
             handler.process()
             original = MeshGeometry(
                 name=name,
@@ -1534,13 +1543,19 @@ def save_mesh_meta(mods_folder, meta):
         json.dump(meta, f, indent=2, ensure_ascii=False)
 
 
-def store_replacement(mods_folder, source_path, mesh_name):
+def store_replacement(mods_folder, source_path, mesh_name, path_id=None):
     """Copy an imported model into the mods folder so the mod survives the
-    original file being moved or deleted. Returns the stored path."""
+    original file being moved or deleted. Returns the stored path.
+
+    path_id is part of the filename because mesh names are not unique in this
+    game -- without it, replacing two different meshes that happen to share a
+    name would silently overwrite one with the other.
+    """
     dest_dir = os.path.join(mods_folder, MESH_SUBFOLDER)
     os.makedirs(dest_dir, exist_ok=True)
     ext  = os.path.splitext(source_path)[1].lower() or ".obj"
-    dest = os.path.join(dest_dir, _safe_name(mesh_name) + ext)
+    stem = _safe_name(mesh_name) + (f"_{path_id}" if path_id is not None else "")
+    dest = os.path.join(dest_dir, stem + ext)
     if os.path.abspath(dest) != os.path.abspath(source_path):
         shutil.copy2(source_path, dest)
     return dest
