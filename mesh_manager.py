@@ -1433,18 +1433,45 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
             f.write(new_bytes)
         method = "in-place"
     elif allow_rebuild:
+        # Objects this app never read are re-emitted from their raw bytes, so a
+        # rebuild carries existing texture patches over -- but the README's
+        # warning about full re-serialization is worth respecting, so the
+        # rebuilt file is verified against the original object table BEFORE it
+        # replaces anything. Anything missing, added or resized and the write is
+        # abandoned with the game file untouched.
+        expected = {o.path_id: o.byte_size for o in env.objects}
         mesh.save()
         rebuilt = env.file.save()
         tmp = assets_path + ".rebuild_tmp"
         with open(tmp, "wb") as f:
             f.write(rebuilt)
+        try:
+            actual = {o.path_id: o.byte_size for o in UnityPy.load(tmp).objects}
+        except Exception as exc:
+            os.remove(tmp)
+            raise MeshError(f"The rebuilt '{os.path.basename(assets_path)}' could "
+                            f"not be read back ({exc}); your game file was left "
+                            f"alone.")
+        lost    = set(expected) - set(actual)
+        gained  = set(actual) - set(expected)
+        resized = [pid for pid in expected
+                   if pid != path_id and pid in actual
+                   and actual[pid] != expected[pid]]
+        if lost or gained or resized:
+            os.remove(tmp)
+            raise MeshError(
+                f"Rebuilding '{os.path.basename(assets_path)}' would have changed "
+                f"{len(lost)} lost / {len(gained)} added / {len(resized)} resized "
+                f"other object(s), so it was abandoned and your game file was left "
+                f"alone. Reduce the replacement's triangle count to fit the "
+                f"in-place budget instead.")
         os.replace(tmp, assets_path)
         method = "rebuild"
         warnings.append(
             f"'{os.path.basename(assets_path)}' was rebuilt rather than patched in "
             f"place, because the replacement needed a bigger object "
-            f"({len(new_bytes):,}b vs {obj.byte_size:,}b). Other mods already "
-            f"written into this file were carried over.")
+            f"({len(new_bytes):,}b vs {obj.byte_size:,}b). All {len(expected):,} "
+            f"other objects in the file were verified unchanged afterwards.")
     else:
         raise MeshError(
             f"'{name}' would serialize to {len(new_bytes):,} bytes instead of "

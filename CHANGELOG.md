@@ -1,5 +1,90 @@
 # Changelog
 
+## v2.2.0
+
+### What's New
+
+- **New Meshes tab: view, export and replace the game's 3D models.**
+
+Every `Mesh` in the game -- players, the ball, the hoop, the arena, the court --
+is now browsable, viewable in 3D, exportable, and replaceable, the same way
+textures and audio already were.
+
+### Added
+
+- **3D viewport.** Orbit (drag), pan (right-drag), zoom (wheel), re-frame
+  (double-click), with shaded / textured / wireframe / shaded+wire / points /
+  normals / submesh display modes, a ground grid, an axis gizmo, a turntable
+  spin toggle and a render snapshot button. It's a software renderer built on
+  PIL -- vertices are transformed in Python (numpy-accelerated when numpy is
+  installed, plain lists when it isn't), triangles are depth-sorted and painted
+  back to front -- so it needs no GPU stack and no new hard dependency. Dense
+  meshes drop to a point cloud while you drag and return to full quality when
+  you let go.
+
+- **Export to OBJ, GLB, PLY and STL.** OBJ is the round-trip format: UVs,
+  normals and one group per submesh, so an export re-imports onto the same
+  material slots. GLB is single-file glTF 2.0 that opens directly in Blender and
+  Windows 3D Viewer. Coordinates are converted from Unity's left-handed axes on
+  the way out and converted back on the way in, so a round trip is lossless.
+  "Export List" dumps every mesh currently in the list at once.
+
+- **Import replacements from OBJ, PLY or STL.** The import dialog compares the
+  model against the original and against the slot's budget before anything is
+  queued, and offers a one-click scale factor to match the original's size plus
+  optional re-centring and normal recalculation.
+
+- **Skinned meshes keep animating.** Player and mascot meshes carry per-vertex
+  bone indices and weights that a model made in Blender won't have; each new
+  vertex borrows them from the closest original vertex, so the replacement still
+  follows the skeleton.
+
+- `tools_mesh_selftest.py`, 58 checks that need no copy of the game: every
+  exporter/importer round-trip, the vertex buffer this app writes decoded back
+  by UnityPy's own mesh reader over a full Unity 6 channel layout (packed
+  colours and bone weights included), index padding, submesh windows, the
+  .resS append/rewind bookkeeping against real files on disk, and the
+  bone-weight transfer.
+
+- `MESH_MODDING_GUIDE.md` with the modelling rules, the budget explanation and a
+  troubleshooting table.
+
+### How mesh replacement is written
+
+Same in-place binary patch as everything else in this app. A mesh's vertex data
+is streamed from the companion `.resS` file, so new vertex data is appended
+there and only an offset changes -- the vertex count of a replacement is
+unlimited. The triangle index buffer, though, is stored inside the object at a
+fixed size, so it is reused at its original byte length and zero-padded past the
+end of the last submesh window (padding no submesh indexes, so the GPU never
+sees it). The rewritten object therefore serializes to exactly the same number
+of bytes as the one it replaces and splices in place, which caps a replacement
+at the original's triangle count and is reported as a budget in the UI before
+you import.
+
+An opt-in **rebuild fallback** lifts that cap by re-serializing the whole
+`.assets` file. Since this README has warned since v1 that UnityPy's full
+re-serialization can drop data, the rebuilt file is verified object-by-object
+against the original -- every other object present, and the same size -- before
+it is allowed to replace anything; if the check fails, the write is abandoned
+and the game file is left untouched.
+
+### Changed
+
+- **"Apply Texture Mods" is now "Apply Mods", and applies meshes too.** Textures
+  and meshes in the same `.assets` file share one `.resS` companion, and both
+  append their bulk data to it after rewinding it to its backup once per run.
+  Applying one kind on its own would rewind that file out from under the other
+  kind's offsets, leaving those objects pointing past the end of the file. They
+  now always go together, from one pipeline with one shared rewind set.
+  "Restore Textures" is likewise now "Restore Game Files".
+
+- `revert_object_from_backup()` locates the object in the backup file rather
+  than assuming the backup and the live file share a layout. Every texture patch
+  is size-neutral so the two normally do agree, but the mesh rebuild fallback
+  can shift every object after the one it grew, and reverting a texture mod
+  afterwards would have spliced in the wrong object's bytes.
+
 ## v2.1.1
 
 ### What's New

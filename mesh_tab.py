@@ -260,6 +260,8 @@ class MeshTab(tk.Frame):
         bf.grid(row=4, column=0, pady=(6, 12))
         ttk.Button(bf, text="⬇ Export Mesh", style="Soft.TButton",
                    command=self._export).pack(side="left", padx=5)
+        ttk.Button(bf, text="⬇⬇ Export List", style="Soft.TButton",
+                   command=self._export_all).pack(side="left", padx=5)
         ttk.Button(bf, text="⬆ Import Replacement", style="Accent.TButton",
                    command=self._import).pack(side="left", padx=5)
         ttk.Button(bf, text="✕ Remove Mod", style="Soft.TButton",
@@ -283,9 +285,14 @@ class MeshTab(tk.Frame):
                 "place, which can never damage the rest of the file but limits a "
                 "replacement to the original's triangle count.\n\n"
                 "With rebuild allowed, a mesh that needs more triangles makes the "
-                "app re-write the whole .assets file with new object offsets. Mods "
-                "already in the file are carried over and your backups still work, "
-                "but it is a much bigger write than the in-place patch.\n\n"
+                "app re-write the whole .assets file with new object offsets. "
+                "Mods already in the file are carried over, and before the new "
+                "file replaces the old one every other object in it is checked "
+                "to be present and the same size — if anything moved, the write "
+                "is abandoned and your game file is left alone.\n\n"
+                "It still holds the entire file in memory while it works, which "
+                "on the game's biggest .assets files is a lot, and it is far "
+                "less proven than the in-place patch.\n\n"
                 "Leave it off unless a mesh you want is over its budget.")
 
     # ── loading ──────────────────────────────────────────────────────────────
@@ -522,6 +529,49 @@ class MeshTab(tk.Frame):
             return
         self._status(f"Exported {geo.triangle_count:,} triangles to "
                      f"{os.path.basename(path)}")
+
+    def _export_all(self):
+        """Dump every mesh currently in the list to a folder.
+
+        The practical way to work out which mesh is which: export the lot, open
+        the folder in Blender, and find the model you actually want to change.
+        """
+        meshes = list(self.filtered_meshes)
+        if not meshes:
+            messagebox.showinfo("Export all", "The list is empty — nothing to export.")
+            return
+        folder = filedialog.askdirectory(title=f"Export {len(meshes)} meshes to…")
+        if not folder:
+            return
+        if len(meshes) > 200 and not messagebox.askyesno(
+                "Export all",
+                f"That's {len(meshes)} meshes. This can take several minutes and "
+                f"write a lot of files.\n\nSearch or filter the list first to "
+                f"narrow it down.\n\nExport anyway?"):
+            return
+        threading.Thread(target=self._export_all_worker, args=(meshes, folder),
+                         daemon=True).start()
+
+    def _export_all_worker(self, meshes, folder):
+        done, failed = 0, []
+        for i, entry in enumerate(meshes):
+            self.after(0, lambda n=entry["name"], i=i, t=len(meshes):
+                       self._status(f"Exporting {n}  ({i + 1}/{t})…"))
+            try:
+                geo, _ = mm.load_mesh(entry["assets_file"], entry["path_id"])
+                # path_id keeps two meshes that share a name from overwriting
+                # each other, and ties the file back to the row in the list
+                name = f"{mm._safe_name(entry['name'])}_{entry['path_id']}.obj"
+                mm.export_geometry(geo, os.path.join(folder, name))
+                done += 1
+            except Exception as exc:
+                failed.append(f"{entry['name']}: {exc}")
+        self.after(0, lambda: self._status(
+            f"Exported {done}/{len(meshes)} meshes to {folder}"
+            + (f"  ⚠ {len(failed)} failed." if failed else "")))
+        if failed:
+            self.after(0, lambda: messagebox.showwarning(
+                "Some meshes could not be exported", "\n".join(failed[:20])))
 
     # ── import ───────────────────────────────────────────────────────────────
     def _import(self):

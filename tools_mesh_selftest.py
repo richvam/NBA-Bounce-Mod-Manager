@@ -13,9 +13,11 @@ Covers the parts that are easy to get quietly wrong:
   3. the index buffer, submesh windows and bounds land where the decoder
      expects them, including the zero-padding that keeps an in-place patch the
      same byte size as the object it replaces;
-  4. bone weights transfer to a replacement that has none.
+  4. the .resS append/rewind bookkeeping, against real files on disk -- the
+     shared stream file is rewound once per apply run, not once per mod;
+  5. bone weights transfer to a replacement that has none.
 
-Sections 2-4 need UnityPy; they're skipped with a note if it isn't installed.
+Sections 2-5 need UnityPy; they're skipped with a note if it isn't installed.
 The 3D viewer isn't exercised here (it needs a display); run `python mesh_tab.py`
 for that.
 """
@@ -328,6 +330,151 @@ def test_index_padding():
           decoded == [tuple(t) for t in geo.triangles])
 
 
+class _FakeReader:
+    endian = "<"
+
+
+class _FakeObject:
+    """Stands in for a UnityPy ObjectReader over a mesh we built in memory."""
+
+    def __init__(self, mesh, path_id, byte_start, byte_size):
+        self.mesh = mesh
+        self.path_id = path_id
+        self.byte_start = byte_start
+        self.byte_size = byte_size
+        self.version = VERSION
+        self.reader = _FakeReader()
+        self.type = type("T", (), {"name": "Mesh"})()
+
+    def read(self):
+        return self.mesh
+
+    def peek_name(self):
+        return self.mesh.m_Name
+
+    def _get_typetree_node(self):
+        return None
+
+
+def test_stream_writeback():
+    """The .resS dance: rewind once per run, append, record the right offset.
+
+    This is the failure mode the app already hit once with textures -- rewinding
+    the shared .resS per mod instead of per run silently strands every mod
+    applied before it -- so it gets tested with real files on disk rather than
+    reasoned about.
+    """
+    print("\nStreamed writeback (.resS offsets)")
+    try:
+        import UnityPy
+        from UnityPy.helpers import TypeTreeHelper
+    except ImportError:
+        SKIP.append("streamed writeback")
+        print("  SKIP  UnityPy isn't installed")
+        return
+
+    folder = tempfile.mkdtemp(prefix="mesh_selftest_ress_")
+    assets = os.path.join(folder, "sharedassets1.assets")
+    ress = assets + ".resS"
+    original_assets = bytes(range(256)) * 40           # 10 KB of recognizable filler
+    original_ress = b"PIXELS!!" * 128                  # stock streamed data
+    for path, blob in ((assets, original_assets), (ress, original_ress)):
+        with open(path, "wb") as f:
+            f.write(blob)
+        with open(path + mm.BACKUP_SUFFIX, "wb") as f:
+            f.write(blob)
+    # a previous apply already appended texture bytes to the live .resS
+    with open(ress, "ab") as f:
+        f.write(b"OLDMOD" * 20)
+
+    geo = sample_sphere(segments=10, rings=8)
+    meshes = [_fake_unity_mesh(geo, skinned=False) for _ in range(2)]
+    for mesh in meshes:
+        mesh.m_StreamData.path = "archive:/CAB-fake/sharedassets1.assets.resS"
+        mesh.m_StreamData.offset = 0
+        mesh.m_StreamData.size = 0
+        mesh.m_IndexBuffer = b"\0" * (geo.triangle_count * 3 * 2 + 128)
+
+    objects = [_FakeObject(meshes[0], 11, 512, 96),
+               _FakeObject(meshes[1], 22, 4096, 96)]
+    env = type("Env", (), {"objects": objects, "file": None})()
+
+    real_load, real_write = UnityPy.load, TypeTreeHelper.write_typetree
+    UnityPy.load = lambda *a, **k: env
+    TypeTreeHelper.write_typetree = lambda tree, node, writer, af: writer.write_bytes(
+        b"M" * 96)
+    try:
+        shared = set()
+        first = mm.apply_mesh_mod(assets, 11, geo, ress_reset=shared)
+        second = mm.apply_mesh_mod(assets, 22, geo, ress_reset=shared)
+
+        check("both meshes patched in place",
+              first["method"] == "in-place" and second["method"] == "in-place")
+        check("the .resS was rewound exactly once", len(shared) == 1)
+
+        blob = open(ress, "rb").read()
+        check("the .resS starts from its backup, not the modded copy",
+              blob[:len(original_ress)] == original_ress
+              and b"OLDMOD" not in blob,
+              "stale mod bytes were left in the stream file")
+
+        # float3 pos + float3 normal + float4 tangent + UNorm8 colour + 2 float2 UVs
+        stride = 12 + 12 + 16 + 4 + 8 + 8
+        for mesh, label in zip(meshes, ("first", "second")):
+            start = mesh.m_StreamData.offset
+            size = mesh.m_StreamData.size
+            check(f"{label} mesh's vertex data is where its offset says",
+                  start + size <= len(blob) and size == geo.vertex_count * stride,
+                  f"offset {start}, size {size}, file {len(blob)} bytes")
+            check(f"{label} mesh's blob is 16-byte aligned", start % 16 == 0)
+        check("the two meshes don't overlap in the .resS",
+              meshes[0].m_StreamData.offset + meshes[0].m_StreamData.size
+              <= meshes[1].m_StreamData.offset)
+        check("appending never shrinks the .resS",
+              len(blob) >= len(original_ress))
+
+        patched = open(assets, "rb").read()
+        check("each object was spliced at its own byte_start",
+              patched[512:512 + 96] == b"M" * 96
+              and patched[4096:4096 + 96] == b"M" * 96)
+        check("everything outside those objects is untouched",
+              patched[:512] == original_assets[:512]
+              and patched[608:4096] == original_assets[608:4096]
+              and len(patched) == len(original_assets))
+
+        # over-budget replacement, rebuild not allowed -> refused, file untouched
+        before = open(assets, "rb").read()
+        big = sample_sphere(segments=40, rings=30)
+        try:
+            mm.apply_mesh_mod(assets, 11, big, ress_reset=shared)
+            check("an over-budget replacement is refused", False)
+        except mm.MeshError as exc:
+            check("an over-budget replacement is refused",
+                  "triangle" in str(exc) or "rebuild" in str(exc), str(exc))
+        check("a refused write leaves the .assets file alone",
+              open(assets, "rb").read() == before)
+
+        # object that would change size, rebuild not allowed -> refused
+        TypeTreeHelper.write_typetree = lambda tree, node, writer, af: \
+            writer.write_bytes(b"M" * 128)
+        try:
+            mm.apply_mesh_mod(assets, 11, geo, ress_reset=shared)
+            check("a size change without the rebuild option is refused", False)
+        except mm.MeshError:
+            check("a size change without the rebuild option is refused", True)
+
+        # compressed meshes are read-only
+        meshes[0].m_MeshCompression = 1
+        try:
+            mm.apply_mesh_mod(assets, 11, geo, ress_reset=shared)
+            check("compressed meshes are refused", False)
+        except mm.MeshError:
+            check("compressed meshes are refused", True)
+        meshes[0].m_MeshCompression = 0
+    finally:
+        UnityPy.load, TypeTreeHelper.write_typetree = real_load, real_write
+
+
 def test_skin_transfer():
     print("\nSkin weight transfer")
     original = mm.MeshGeometry(
@@ -392,6 +539,7 @@ def main():
     test_formats()
     test_unity_roundtrip()
     test_index_padding()
+    test_stream_writeback()
     test_skin_transfer()
     test_validation()
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed, {len(SKIP)} skipped")

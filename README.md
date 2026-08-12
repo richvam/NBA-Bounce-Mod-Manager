@@ -17,6 +17,7 @@
 | Home screen | Big, one-click cards for every tool below; everything is also always reachable from the tabs at the top |
 | Textures | Browse, preview, export, and replace any of the ~2,000+ `Texture2D` assets in the game |
 | Audio | Browse, play, tag the language of, and replace any in-game audio clip |
+| Meshes | View any of the game's 3D models in an orbit/zoom viewport, export them to OBJ/GLB/PLY/STL, and import replacements |
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
@@ -61,7 +62,7 @@ Click **Save & Reload**. Every tab reads from these same two paths.
 
 ## Home Screen
 
-The app opens on **Home**, with a card for each tool: Textures, Audio, Floor Patterns, Gameplay Sliders, and Court Colors. Clicking a card jumps to that tool. The tabs across the top (Home, Textures, Audio, Floor Patterns, Gameplay Sliders, Court Colors) are always visible too, so you never have to come back to Home just to switch tools.
+The app opens on **Home**, with a card for each tool: Textures, Audio, Meshes, Floor Patterns, Gameplay Sliders, Court Colors, and Saves. Clicking a card jumps to that tool. The tabs across the top are always visible too, so you never have to come back to Home just to switch tools.
 
 ---
 
@@ -91,8 +92,10 @@ The one exception is a texture shared by several sprites (a real atlas — only 
 
 When you're ready to write your changes into the game, use the buttons in the top bar (available from any tab):
 
-- **Apply Texture Mods**: writes every queued texture replacement into the game in one pass. The affected `.assets` and `.resS` files are backed up automatically the first time (never overwritten after that), so this is always safe to re-run, including after a game update, when it'll instantly bring all your mods back.
-- **Restore Textures**: rolls every modded texture file back to its original state. Your replacement PNGs are kept, so you can re-apply them at any time.
+- **Apply Mods**: writes every queued texture *and* mesh replacement into the game in one pass. The affected `.assets` and `.resS` files are backed up automatically the first time (never overwritten after that), so this is always safe to re-run, including after a game update, when it'll instantly bring all your mods back.
+- **Restore Game Files**: rolls every modded `.assets`/`.resS` file back to its original state, undoing both texture and mesh replacements. Your replacement PNGs and models are kept, so you can re-apply them at any time.
+
+> Textures and meshes are applied together on purpose: both append their data to the same companion `.resS` file, which is rewound to its backup once per run, so writing one kind on its own would strand the other kind's data.
 
 ---
 
@@ -116,6 +119,25 @@ As with Textures, the top bar has:
 - **Restore Audio**: restores the originals; your queued replacements are kept
 
 > **Note on audio replacement:** NBA Bounce's audio is FMOD-Vorbis, and there's no pure-Python FMOD encoder available, so replacements are injected as raw PCM with the clip's format flipped to PCM. This is confirmed to work for clips the game loads into memory up front. For clips that stream continuously, the game may ignore the replacement; it won't crash, the sound just won't change.
+
+---
+
+## Meshes
+
+The **Meshes** tab lists every `Mesh` asset in the game — players, the ball, the hoop, the arena, the court — and shows the selected one in a 3D viewport you can orbit (drag), pan (right-drag), zoom (wheel) and re-frame (double-click). There's no GPU requirement: the viewport is a small software renderer drawing onto the canvas.
+
+Display modes: **Shaded**, **Textured** (pick any PNG with **Texture…** — for example one you exported from the Textures tab — and each triangle is filled with the texture colour at its UV centre), **Wireframe**, **Shaded + Wire**, **Points**, **Normals**, and **Submeshes** (one colour per material slot). **Spin** turntables the model and **📷** saves a render.
+
+- **⬇ Export Mesh**: save the model as **OBJ** (the round-trip format: UVs, normals, one group per submesh), **GLB** (glTF 2.0, opens straight in Blender or Windows 3D Viewer), **PLY**, or **STL**
+- **⬇⬇ Export List**: dump everything currently in the list as OBJ into a folder — the fastest way to find which of several hundred meshes is the one you want
+- **⬆ Import Replacement**: pick an OBJ, PLY or STL. The import dialog compares it against the original and against what the slot can take, and offers a one-click scale factor to match the original's size
+- **✕ Remove Mod**: drops the replacement and puts that mesh back to stock
+
+**Replacement budget.** Vertex data is streamed to the `.resS` file, so a replacement can have as many vertices as it likes, but the triangle list lives inside the object at a fixed size — so a replacement can have at most as many triangles as the mesh it replaces. The exact numbers for the selected mesh are shown under the viewport. Decimate in Blender to fit, or tick **Allow file rebuild** to lift the limit by re-writing the whole `.assets` file (opt-in, and verified object-by-object before it replaces anything).
+
+Skinned meshes (marked 🦴) keep animating: bone weights are copied from the nearest original vertex, since a model you made in Blender won't have the game's rigging.
+
+Full details, modelling rules and troubleshooting: **[MESH_MODDING_GUIDE.md](MESH_MODDING_GUIDE.md)**.
 
 ---
 
@@ -225,6 +247,10 @@ Open **Settings** from the top bar at any time.
 nba-bounce-mod-manager/
 ├── app.py                              # Main app: Home / Textures / Audio tabs, Settings
 ├── audio_manager.py                    # Audio tab: playback, language tags, replacements
+├── mesh_tab.py                         # Meshes tab: browser, viewer, import/export UI
+├── mesh_view.py                        # Software 3D renderer for the mesh viewport
+├── mesh_manager.py                     # Mesh decode/encode, OBJ/GLB/PLY/STL, writeback
+├── tools_mesh_selftest.py              # Mesh pipeline self-test (no game files needed)
 ├── sprite_crop.py                      # Widens baked sprite crops so replacements aren't cut off
 ├── floor_patterns.py                   # Floor Patterns tool
 ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
@@ -243,7 +269,9 @@ nba-bounce-mod-manager/
 <mods_folder>/
 ├── mods.json               # Maps each texture to its replacement PNG
 ├── audio_mods.json         # Maps each audio clip to its replacement WAV
+├── mesh_mods.json          # Maps each mesh to its replacement model + import options
 ├── languages.json          # Manually-tagged audio clip languages
+├── meshes/                 # Your replacement models (.obj / .ply / .stl)
 ├── *.png                   # Your replacement textures
 └── *.wav                   # Your replacement audio clips
 ```
@@ -266,6 +294,8 @@ Every tool in this app uses the same **in-place binary patch** strategy:
 3. All other objects in the file are left bit-for-bit identical
 
 This avoids a known bug in UnityPy 1.25's `save()` method that causes data loss from unmodified objects when a file is fully re-serialized.
+
+**Meshes** follow the same rule. A replacement's vertex data is appended to the `.resS` (so the vertex count is free to change) and the existing index buffer is reused at its original byte length, zero-padded past the last submesh window — which keeps the rewritten `Mesh` object exactly the size of the one it replaces, and caps a replacement at the original's triangle count. The Meshes tab's opt-in rebuild fallback is the one place this app *does* fully re-serialize a file; because of the data-loss risk noted above, the rebuilt file is verified object-by-object against the original before it is allowed to replace it, and abandoned if anything else moved.
 
 **Texture format mapping:**
 | Original format | Written as | Why |
@@ -291,6 +321,7 @@ texture2ddecoder
 astc-encoder-py
 fsspec
 dnfile
+numpy      # optional: only speeds up the 3D mesh viewer
 ```
 
 All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` itself on first run. No manual `pip install` is needed.
@@ -306,10 +337,11 @@ All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` i
 | **"UnityPy not installed" on launch** | Run `SETUP_AND_RUN.bat` (not `RUN.bat`) to reinstall dependencies |
 | **Game data folder not found** | Open Settings and browse to your `NBA Bounce_Data` folder |
 | **Textures look wrong / stretched in game** | Your replacement PNG should match the original's resolution |
-| **A replacement logo is cut off in game** | Fixed in v2.1.1 — click Apply Texture Mods again and the sprite crop gets widened to the full canvas. If the texture is a multi-sprite atlas, importing it lists the regions your artwork has to stay inside |
-| **Game crashes after applying** | Click Restore Textures (or Restore Audio) to revert, then check your replacement file is valid |
+| **A replacement logo is cut off in game** | Fixed in v2.1.1 — click Apply Mods again and the sprite crop gets widened to the full canvas. If the texture is a multi-sprite atlas, importing it lists the regions your artwork has to stay inside |
+| **Game crashes after applying** | Click Restore Game Files (or Restore Audio) to revert, then check your replacement file is valid |
 | **Audio replacement doesn't seem to change anything** | Some clips stream continuously and may ignore replacement; see the note under Audio above |
-| **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Texture Mods / Apply Audio Mods again |
+| **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Mods / Apply Audio Mods again |
+| **A mesh replacement is over budget, invisible, or inside-out** | See the troubleshooting table in [MESH_MODDING_GUIDE.md](MESH_MODDING_GUIDE.md) |
 | **Court Colors / Floor Patterns changes not visible** | Changes only appear after fully quitting and relaunching the game |
 
 ---
