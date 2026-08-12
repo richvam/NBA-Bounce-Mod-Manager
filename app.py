@@ -8,6 +8,7 @@ REQUIRED_PACKAGES = [
     "texture2ddecoder", "astc-encoder-py", "Pillow", "UnityPy",
     "dnfile",   # Gameplay Sliders: reads Assembly-CSharp.dll field layout
     "pygame",   # Audio tab: clip playback
+    "numpy",    # Meshes tab: optional, only speeds the 3D viewer up
 ]
 
 def _ensure_dependencies():
@@ -497,25 +498,30 @@ def revert_object_from_backup(assets_path, path_id):
 
     Used when a mod is removed: the texture (and the sprite crop repaired
     alongside it) goes back to stock without disturbing any other mod in the same
-    file. Object layout is identical between backup and live file -- every patch
-    this app makes is size-neutral -- so the byte range can be copied straight
-    across.
+    file.
+
+    The object is located in BOTH files rather than assuming they share a
+    layout. Every texture patch is size-neutral, so the two usually do agree --
+    but the Meshes tab's rebuild fallback re-serializes a whole .assets file and
+    shifts every object after the one it grew, and reading the backup at the
+    live file's offset would then splice in the wrong object's bytes.
     """
     bak = assets_path + BACKUP_SUFFIX
     if not os.path.exists(bak):
         return False
-    env = UnityPy.load(assets_path)
-    target = next((o for o in env.objects if o.path_id == path_id), None)
-    if target is None:
+    live = next((o for o in UnityPy.load(assets_path).objects
+                 if o.path_id == path_id), None)
+    orig = next((o for o in UnityPy.load(bak).objects
+                 if o.path_id == path_id), None)
+    if live is None or orig is None or live.byte_size != orig.byte_size:
         return False
-    start, size = target.byte_start, target.byte_size
     with open(bak, "rb") as f:
-        f.seek(start)
-        original = f.read(size)
-    if len(original) != size:
+        f.seek(orig.byte_start)
+        original = f.read(orig.byte_size)
+    if len(original) != live.byte_size:
         return False
     with open(assets_path, "r+b") as f:
-        f.seek(start)
+        f.seek(live.byte_start)
         f.write(original)
     return True
 
@@ -1165,6 +1171,7 @@ class ModManagerApp(tk.Tk):
         self._sort_col         = None
         self._sort_asc         = True
         self.audio_frame       = None
+        self.mesh_frame        = None
 
         self._apply_styles()
         self._build_ui()
@@ -1220,8 +1227,8 @@ class ModManagerApp(tk.Tk):
         ttk.Label(top, text="🏀  "+APP_NAME, style="Header.TLabel",
                   background=C["panel"]).pack(side="left", padx=16, pady=10)
         ttk.Button(top, text="⚙ Settings",           style="Soft.TButton",   command=self._open_settings).pack(side="right", padx=8, pady=8)
-        ttk.Button(top, text="♻ Restore Textures",    style="Soft.TButton",   command=self._restore_all).pack(side="right",  padx=4, pady=8)
-        ttk.Button(top, text="▶ Apply Texture Mods",  style="Accent.TButton", command=self._apply_all_mods).pack(side="right", padx=4, pady=8)
+        ttk.Button(top, text="♻ Restore Game Files",  style="Soft.TButton",   command=self._restore_all).pack(side="right",  padx=4, pady=8)
+        ttk.Button(top, text="▶ Apply Mods",          style="Accent.TButton", command=self._apply_all_mods).pack(side="right", padx=4, pady=8)
 
         self.status_var = tk.StringVar(value="Configure your game path in ⚙ Settings to begin.")
         tk.Label(self, textvariable=self.status_var, bg=C["accent"], fg="#FFFFFF",
@@ -1233,6 +1240,7 @@ class ModManagerApp(tk.Tk):
         self._build_home_tab(self.notebook)
         self._build_textures_tab(self.notebook)
         self._build_audio_tab(self.notebook)
+        self._build_meshes_tab(self.notebook)
         self.floor_patterns_tab = self._build_tool_tab(
             self.notebook, "🪵 Floor Patterns", "🪵", "Floor Patterns",
             "Pick a wood-grain pattern for each team's court, throwback eras included.",
@@ -1247,6 +1255,33 @@ class ModManagerApp(tk.Tk):
             self._open_court_colors_dialog)
         self._build_saves_tab(self.notebook)
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+
+    # ── Meshes tab ────────────────────────────────────────────────────────────
+    def _build_meshes_tab(self, notebook):
+        """Browse, view in 3D, export and replace the game's Mesh assets.
+
+        Lives in mesh_tab.py + mesh_view.py + mesh_manager.py, which import
+        nothing from this file. The one thing that IS shared is the apply run:
+        meshes stream their vertex data into the same .resS files textures
+        stream their pixels into, so both are written from _apply_all_mods()
+        with a single ress_reset set (see mesh_tab.apply_all). Imported lazily
+        so a missing or broken module degrades to a message instead of blocking
+        startup.
+        """
+        tab = ttk.Frame(notebook, style="TFrame")
+        notebook.add(tab, text="🧊 Meshes")
+        self.meshes_tab = tab
+        try:
+            from mesh_tab import MeshTab
+            self.mesh_frame = MeshTab(tab, self.cfg, host=self, theme=self.C)
+            self.mesh_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.mesh_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
+                     justify="left",
+                     text=f"Meshes tab unavailable:\n{e}\n\nmesh_tab.py, "
+                          f"mesh_view.py and mesh_manager.py should sit in the "
+                          f"same folder as app.py.").pack(anchor="w", padx=20, pady=20)
 
     # ── Saves tab ─────────────────────────────────────────────────────────────
     def _build_saves_tab(self, notebook):
@@ -1306,6 +1341,8 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.textures_tab)),
             ("🔊", "Audio", "Browse, play, tag languages, and replace audio clips.",
              lambda: self._goto_tab(self.audio_tab)),
+            ("🧊", "Meshes", "View, export, and replace the game's 3D models.",
+             lambda: self._goto_tab(self.meshes_tab)),
             ("🪵", "Floor Patterns", "Pick a wood-grain pattern for each team's court.",
              lambda: self._goto_tab(self.floor_patterns_tab)),
             ("🎚", "Gameplay Sliders", "Tune CPU skill, shot windows, and movement.",
@@ -1373,6 +1410,8 @@ class ModManagerApp(tk.Tk):
             return
         if self.audio_frame is not None and current is self.audio_tab:
             self.audio_frame.load()
+        elif self.mesh_frame is not None and current is getattr(self, "meshes_tab", None):
+            self.mesh_frame.load()
         elif current is getattr(self, "floor_patterns_tab", None):
             self.after(50, self._open_floor_patterns_dialog)
         elif current is getattr(self, "sliders_tab", None):
@@ -1512,6 +1551,13 @@ class ModManagerApp(tk.Tk):
             if getattr(self, "save_frame", None) is not None:
                 try:
                     self.save_frame.set_game_data_path(self.cfg["game_data_path"])
+                except Exception:
+                    pass
+            # Meshes tab keeps its own list and mesh_mods.json, both of which are
+            # tied to the two folders that just changed.
+            if getattr(self, "mesh_frame", None) is not None:
+                try:
+                    self.mesh_frame.reload_config(self.cfg)
                 except Exception:
                     pass
             dlg.destroy(); self._load_textures_async()
@@ -1828,12 +1874,29 @@ class ModManagerApp(tk.Tk):
         fname = os.path.basename(t["assets_file"])
         self.tree.item(sel[0], values=(t["name"], sz, "✔" if self._mod_key(t) in self.mods_meta else "", fname))
 
+    def _mesh_mod_count(self):
+        frame = getattr(self, "mesh_frame", None)
+        return len(getattr(frame, "mesh_mods", {}) or {}) if frame is not None else 0
+
     def _apply_all_mods(self):
-        if not self.mods_meta:
-            messagebox.showinfo("No mods", "You haven't added any texture mods yet."); return
-        count = len(self.mods_meta)
+        """Write every queued texture AND mesh replacement in one pass.
+
+        They have to go together. Textures append their pixel bytes to the
+        .resS companion file and meshes append their vertex buffers to the very
+        same file, and both rewind it to its backup once at the start of a run
+        so it can't grow without bound. Applying one kind on its own would
+        rewind the .resS out from under the other kind's offsets, leaving those
+        objects pointing at bytes that are no longer there.
+        """
+        count      = len(self.mods_meta)
+        mesh_count = self._mesh_mod_count()
+        if not count and not mesh_count:
+            messagebox.showinfo("No mods", "You haven't added any texture or mesh mods yet."); return
+        what = []
+        if count:      what.append(f"{count} texture replacement(s)")
+        if mesh_count: what.append(f"{mesh_count} mesh replacement(s)")
         if not messagebox.askyesno("Apply Mods",
-            f"This will write {count} texture replacement(s) to your game files.\n\n"
+            f"This will write {' and '.join(what)} to your game files.\n\n"
             "Original files will be backed up automatically (once).\n\nContinue?"): return
         self.status_var.set("Applying mods… please wait."); self.update_idletasks()
         errors, backed_up, applied = [], [], 0
@@ -1860,7 +1923,20 @@ class ModManagerApp(tk.Tk):
                 warnings += [f"{mod['name']}: {note}" for note in notes]
             except Exception as e:
                 warnings.append(f"{mod['name']}: sprite crop not repaired ({e})")
-        msg = f"✅ Applied {applied}/{count} mods."
+
+        # Meshes second, sharing ress_reset so both kinds of mod end up in the
+        # same .resS pass (see the docstring).
+        mesh_applied, mesh_notes = 0, []
+        if mesh_count:
+            self.status_var.set("Applying mesh mods…"); self.update_idletasks()
+            m_applied, m_errors, m_warnings = self.mesh_frame.apply_all(
+                ress_reset=ress_reset, ensure_backup=ensure_backup)
+            mesh_applied = m_applied
+            errors      += m_errors
+            mesh_notes   = m_warnings
+
+        msg = f"✅ Applied {applied}/{count} texture mods."
+        if mesh_count: msg = msg[:-1] + f" and {mesh_applied}/{mesh_count} mesh mods."
         if uncropped: msg += f" Un-cropped {uncropped} sprite(s)."
         if backed_up: msg += f" Backed up: {', '.join(backed_up)}."
         if errors:
@@ -1869,6 +1945,8 @@ class ModManagerApp(tk.Tk):
         if warnings:
             msg += f" ⚠ {len(warnings)} warning(s)."
             messagebox.showwarning("Sprite crop notes", "\n\n".join(warnings))
+        if mesh_notes:
+            messagebox.showinfo("Mesh notes", "\n\n".join(mesh_notes))
         self.status_var.set(msg)
 
     def _restore_all(self):
@@ -1879,9 +1957,15 @@ class ModManagerApp(tk.Tk):
         if not restorable:
             messagebox.showinfo("No backups", "No backup files found. Have you applied any mods?"); return
         if not messagebox.askyesno("Restore Originals",
-            f"This will restore {len(restorable)} original file(s).\n"
-            "Your mod PNGs are NOT deleted.\n\nContinue?"): return
+            f"This will restore {len(restorable)} original file(s), undoing every\n"
+            "texture and mesh replacement written into the game.\n"
+            "Your mod PNGs and model files are NOT deleted.\n\nContinue?"): return
         restored = sum(1 for f in restorable if restore_backup(f))
+        if self.mesh_frame is not None:
+            try:
+                self.mesh_frame.refresh_after_restore()
+            except Exception:
+                pass
         self.status_var.set(f"✅ Restored {restored} file(s). Your mods are still saved — re-apply anytime.")
 
     # ── Floor Patterns ────────────────────────────────────────────────────────
