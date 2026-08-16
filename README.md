@@ -1,7 +1,8 @@
 # NBA Bounce Mod Manager
 
-> A Windows desktop app for modding **NBA Bounce** (Unity 6): textures, audio, court floors, court colors, and gameplay sliders, all from one tool, without ever touching a hex editor.
+> A Windows desktop app for modding **NBA Bounce** (Unity 6): textures, audio, 3D meshes, court floors, court colors, and gameplay sliders, all from one tool, without ever touching a hex editor.
 
+![Version](https://img.shields.io/badge/version-3.0.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
 ![Unity](https://img.shields.io/badge/Unity-6000.0.37f1-black?logo=unity)

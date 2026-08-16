@@ -622,6 +622,97 @@ def test_skin_transfer():
         print("  SKIP  numpy isn't installed")
 
 
+def test_file_locks():
+    """Windows won't rename over a file anything still has open.
+
+    UnityPy keeps the .assets stream open for the life of an Environment, so a
+    rebuild that didn't close its readers first failed with WinError 32 every
+    time on Windows while passing on Linux, where the rename is legal. These
+    checks pin both halves of the fix: handles get released, and a file the
+    game or Steam is still holding fails with an explanation instead of a
+    traceback -- with the game file untouched.
+    """
+    print("\nFile handles and locked files")
+    folder = tempfile.mkdtemp(prefix="mesh_selftest_lock_")
+    target = os.path.join(folder, "sharedassets1.assets")
+    with open(target, "wb") as f:
+        f.write(b"STOCK" * 100)
+
+    def holder(handle):
+        return type("R", (), {"stream": handle})()
+
+    handles = [open(target, "rb") for _ in range(3)]
+    env = type("Env", (), {
+        "files": {"sharedassets1.assets": holder(handles[0])},
+        "objects": [type("O", (), {"reader": holder(handles[1])})()],
+        "file": type("F", (), {"reader": holder(handles[2])})(),
+    })()
+    mm.close_env(env)
+    check("close_env releases every reader an environment holds",
+          all(h.closed for h in handles),
+          f"{sum(not h.closed for h in handles)} handle(s) still open")
+
+    try:
+        mm.close_env(None)
+        mm.close_env(type("Bare", (), {})())
+        check("close_env tolerates an environment with nothing to close", True)
+    except Exception as exc:
+        check("close_env tolerates an environment with nothing to close", False,
+              str(exc))
+
+    # browsing a file must not leave a handle behind for a later rebuild
+    try:
+        import UnityPy
+    except ImportError:
+        SKIP.append("browse closes its handle")
+        print("  SKIP  UnityPy isn't installed")
+    else:
+        browsing = open(target, "rb")
+        real_load = UnityPy.load
+        UnityPy.load = lambda *a, **k: type("Env", (), {
+            "files": {"x": holder(browsing)}, "objects": [], "file": None})()
+        try:
+            mm.list_meshes_in_file(target)
+        finally:
+            UnityPy.load = real_load
+        check("listing meshes closes the file it opened", browsing.closed)
+
+    # the swap itself
+    tmp = target + ".rebuild_tmp"
+    with open(tmp, "wb") as f:
+        f.write(b"REBUILT" * 50)
+    mm._replace_game_file(tmp, target, "mesh")
+    check("an unlocked file is replaced normally",
+          open(target, "rb").read() == b"REBUILT" * 50
+          and not os.path.exists(tmp))
+
+    stock = open(target, "rb").read()
+    with open(tmp, "wb") as f:
+        f.write(b"NEVER" * 50)
+    real_replace, real_sleep = os.replace, mm.time.sleep
+
+    def locked(src, dst):
+        raise PermissionError(32, "The process cannot access the file because "
+                                  "it is being used by another process")
+
+    os.replace, mm.time.sleep = locked, lambda s: None
+    try:
+        mm._replace_game_file(tmp, target, "mesh")
+        check("a locked game file is reported, not raised as WinError 32", False)
+    except mm.MeshError as exc:
+        check("a locked game file is reported, not raised as WinError 32",
+              "Steam" in str(exc) and "left untouched" in str(exc), str(exc))
+    except PermissionError:
+        check("a locked game file is reported, not raised as WinError 32", False,
+              "the raw PermissionError reached the caller")
+    finally:
+        os.replace, mm.time.sleep = real_replace, real_sleep
+    check("a locked swap leaves the game file exactly as it was",
+          open(target, "rb").read() == stock)
+    check("a locked swap doesn't leave a .rebuild_tmp behind",
+          not os.path.exists(tmp))
+
+
 def test_validation():
     print("\nGuard rails")
     geo = mm.MeshGeometry("bad", [(0, 0, 0), (1, 0, 0), (0, 1, 0)], [(0, 1, 9)])
@@ -653,6 +744,7 @@ def main():
     test_stream_writeback()
     test_streamed_skin_replacement()
     test_skin_transfer()
+    test_file_locks()
     test_validation()
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed, {len(SKIP)} skipped")
     if FAIL:

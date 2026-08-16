@@ -197,6 +197,7 @@ mesh mod (it doesn't undo anything already written — use Restore for that).
 | Texture is smeared across the model | The model has no UVs, or UVs that don't match the game's texture layout |
 | A player is stretched toward one point | Bone weight transfer didn't map cleanly — the replacement is too different in shape from the original |
 | Mesh looks right in the viewer, wrong in-game | The viewer draws the mesh alone; in-game it's also scaled and positioned by its GameObject, and lit by the game's shaders |
+| "The process cannot access the file because it is being used by another process" (WinError 32) | Something else has the `.assets` file open. Quit NBA Bounce, quit Steam entirely (not just the library window — Steam holds game files open while the game runs or verifies), close any other asset tool, then Apply again |
 | Everything is fine but nothing changed in-game | The `.assets` files were replaced by a game update, or Apply wasn't pressed after queueing |
 
 ---
@@ -207,8 +208,9 @@ mesh mod (it doesn't undo anything already written — use Restore for that).
 python tools_mesh_selftest.py
 ```
 
-Runs 68 checks: every exporter and importer round-trip, the vertex buffer this
+Runs 75 checks: every exporter and importer round-trip, the vertex buffer this
 app writes decoded back by UnityPy's own mesh reader (a full Unity 6 channel
 layout, including packed colours and bone weights), the index padding and submesh
-windows, the .resS offset bookkeeping against real files on disk, and the
-bone-weight transfer. It needs no copy of the game.
+windows, the .resS offset bookkeeping against real files on disk, the
+bone-weight transfer, and the file-handle/locked-file handling the rebuild
+fallback depends on. It needs no copy of the game.

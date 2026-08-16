@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.2.0
+## v3.0.0
 
 ### What's New
 
@@ -39,7 +39,7 @@ textures and audio already were.
   vertex borrows them from the closest original vertex, so the replacement still
   follows the skeleton.
 
-- `tools_mesh_selftest.py`, 68 checks that need no copy of the game: every
+- `tools_mesh_selftest.py`, 75 checks that need no copy of the game: every
   exporter/importer round-trip, the vertex buffer this app writes decoded back
   by UnityPy's own mesh reader over a full Unity 6 channel layout (packed
   colours and bone weights included), index padding, submesh windows, the
@@ -86,6 +86,21 @@ and the game file is left untouched.
   is size-neutral so the two normally do agree, but the mesh rebuild fallback
   can shift every object after the one it grew, and reverting a texture mod
   afterwards would have spliced in the wrong object's bytes.
+
+### Fixed
+
+- **The rebuild fallback failed on Windows with "the process cannot access the
+  file because it is being used by another process" (WinError 32).** UnityPy
+  keeps the `.assets` file open for the lifetime of the environment it was
+  loaded from, and the rebuild swapped its temporary file in while those readers
+  were still open. Linux allows a rename over an open file, which is why the
+  self-test never caught it; Windows refuses, so every rebuild-path apply died
+  at the last step — after the rebuilt file had been written and verified.
+  Every reader on the file is now closed before the swap, browsing and
+  exporting no longer leave handles behind either, and a file genuinely held by
+  something else (the game, Steam, another asset tool) is retried briefly and
+  then reported as a plain-English message naming the likely culprit, with the
+  game file untouched and no `.rebuild_tmp` left behind.
 
 ## v2.1.1
 
