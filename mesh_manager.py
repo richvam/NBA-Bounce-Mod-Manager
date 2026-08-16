@@ -67,12 +67,14 @@ undoes it. The operation is its own inverse, so export -> import round-trips
 byte-for-byte identically.
 """
 
+import gc
 import json
 import math
 import ntpath
 import os
 import shutil
 import struct
+import time
 
 try:
     import numpy as _np
@@ -815,6 +817,84 @@ def _source_file(assets_path, prefer_backup=True):
     return bak if (prefer_backup and os.path.exists(bak)) else assets_path
 
 
+def close_env(env):
+    """Let go of every OS file handle a UnityPy Environment is holding.
+
+    UnityPy opens the .assets file and keeps it open for the lifetime of the
+    Environment. That is harmless on Linux, where a file can be renamed or
+    deleted while readers still have it open, but Windows refuses both and
+    fails with PermissionError/WinError 32 -- so the rebuild path has to close
+    its own readers before it swaps the new file into place.
+    """
+    if env is None:
+        return
+    seen = set()
+
+    def shut(holder):
+        stream = getattr(holder, "stream", None)
+        if stream is None or id(stream) in seen:
+            return
+        seen.add(id(stream))
+        try:
+            stream.close()
+        except Exception:
+            pass
+
+    try:
+        for obj in env.objects:
+            shut(getattr(obj, "reader", None))
+    except Exception:
+        pass
+    for f in list(getattr(env, "files", {}).values()):
+        shut(getattr(f, "reader", None))
+        shut(f)
+    shut(getattr(getattr(env, "file", None), "reader", None))
+
+
+def _discard(path):
+    """Delete a temp file, tolerating a Windows lock that hasn't cleared yet."""
+    for attempt in range(3):
+        try:
+            os.remove(path)
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            gc.collect()
+            time.sleep(0.2 * (attempt + 1))
+
+
+def _replace_game_file(tmp, dest, what="file"):
+    """os.replace(), with Windows' file locking accounted for.
+
+    Windows refuses the swap while ANY process still has the destination open
+    -- the running game, Steam, another asset tool, an antivirus scanner or a
+    reader of our own that hasn't been collected yet. A gc pass clears our
+    leftovers; the short retries ride out a scanner. If it still won't budge,
+    the temp file is dropped and the game file is left exactly as it was.
+    """
+    # the texture pass earlier in the same run leaves readers of its own on
+    # this file; collecting first means the common case doesn't need a retry
+    gc.collect()
+    last = None
+    for attempt in range(5):
+        try:
+            os.replace(tmp, dest)
+            return
+        except PermissionError as exc:
+            last = exc
+            gc.collect()
+            time.sleep(0.3 * (attempt + 1))
+    _discard(tmp)
+    raise MeshError(
+        f"'{os.path.basename(dest)}' is open in another program, so the "
+        f"rebuilt {what} could not be put in place.\n\n"
+        f"Close NBA Bounce and quit Steam (Steam holds game files open while "
+        f"the game is running or verifying), close any other asset tool that "
+        f"has the file loaded, then apply again. Your game file was left "
+        f"untouched.\n\n({last})")
+
+
 def list_meshes_in_file(assets_path, progress=None):
     """Summarize every Mesh in one .assets file, without decoding vertex data.
 
@@ -824,22 +904,27 @@ def list_meshes_in_file(assets_path, progress=None):
     import UnityPy
     meshes = []
     env = UnityPy.load(assets_path)
-    for obj in env.objects:
-        if obj.type.name != "Mesh":
-            continue
-        entry = {"name": f"mesh_{obj.path_id}", "path_id": obj.path_id,
-                 "assets_file": assets_path, "vertices": 0, "triangles": 0,
-                 "submeshes": 0, "streamed": False, "skinned": False,
-                 "compressed": False, "readable": True}
-        try:
-            entry["name"] = obj.peek_name() or entry["name"]
-            mesh = obj.read()
-            entry.update(_mesh_stats(mesh, obj))
-        except Exception:
-            entry["readable"] = False
-        meshes.append(entry)
-        if progress:
-            progress(len(meshes))
+    try:
+        for obj in env.objects:
+            if obj.type.name != "Mesh":
+                continue
+            entry = {"name": f"mesh_{obj.path_id}", "path_id": obj.path_id,
+                     "assets_file": assets_path, "vertices": 0, "triangles": 0,
+                     "submeshes": 0, "streamed": False, "skinned": False,
+                     "compressed": False, "readable": True}
+            try:
+                entry["name"] = obj.peek_name() or entry["name"]
+                mesh = obj.read()
+                entry.update(_mesh_stats(mesh, obj))
+            except Exception:
+                entry["readable"] = False
+            meshes.append(entry)
+            if progress:
+                progress(len(meshes))
+    finally:
+        # browsing must not leave a handle on the game file: a later rebuild
+        # would then fail to rename over it on Windows
+        close_env(env)
     return meshes
 
 
@@ -874,9 +959,16 @@ def _mesh_stats(mesh, obj):
 def load_mesh(assets_path, path_id, prefer_backup=True):
     """Decode one Mesh into a MeshGeometry (Unity space) plus an info dict."""
     import UnityPy
+    env = UnityPy.load(_source_file(assets_path, prefer_backup))
+    try:
+        return _decode_mesh(env, assets_path, path_id)
+    finally:
+        close_env(env)
+
+
+def _decode_mesh(env, assets_path, path_id):
     from UnityPy.helpers.MeshHelper import MeshHandler
 
-    env = UnityPy.load(_source_file(assets_path, prefer_backup))
     obj = next((o for o in env.objects if o.path_id == path_id), None)
     if obj is None:
         raise MeshError(f"No mesh with path_id {path_id} in "
@@ -938,6 +1030,13 @@ def mesh_write_info(assets_path, path_id):
     """
     import UnityPy
     env = UnityPy.load(assets_path)
+    try:
+        return _write_info(env, assets_path, path_id)
+    finally:
+        close_env(env)
+
+
+def _write_info(env, assets_path, path_id):
     obj = next((o for o in env.objects if o.path_id == path_id), None)
     if obj is None:
         raise MeshError(f"No mesh with path_id {path_id} in "
@@ -1344,6 +1443,7 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
         except Exception as exc:
             warnings.append(f"Couldn't read the original bone weights ({exc}).")
         # re-read: MeshHandler.process() swaps the streamed blob into m_DataSize
+        close_env(env)
         env = UnityPy.load(assets_path)
         obj = next(o for o in env.objects if o.path_id == path_id)
         mesh = obj.read()
@@ -1454,27 +1554,35 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
         tmp = assets_path + ".rebuild_tmp"
         with open(tmp, "wb") as f:
             f.write(rebuilt)
+        verify = None
         try:
-            actual = {o.path_id: o.byte_size for o in UnityPy.load(tmp).objects}
+            verify = UnityPy.load(tmp)
+            actual = {o.path_id: o.byte_size for o in verify.objects}
         except Exception as exc:
-            os.remove(tmp)
+            close_env(verify)
+            _discard(tmp)
             raise MeshError(f"The rebuilt '{os.path.basename(assets_path)}' could "
                             f"not be read back ({exc}); your game file was left "
                             f"alone.")
+        finally:
+            close_env(verify)
         lost    = set(expected) - set(actual)
         gained  = set(actual) - set(expected)
         resized = [pid for pid in expected
                    if pid != path_id and pid in actual
                    and actual[pid] != expected[pid]]
         if lost or gained or resized:
-            os.remove(tmp)
+            _discard(tmp)
             raise MeshError(
                 f"Rebuilding '{os.path.basename(assets_path)}' would have changed "
                 f"{len(lost)} lost / {len(gained)} added / {len(resized)} resized "
                 f"other object(s), so it was abandoned and your game file was left "
                 f"alone. Reduce the replacement's triangle count to fit the "
                 f"in-place budget instead.")
-        os.replace(tmp, assets_path)
+        # Every reader on the game file has to be shut before the swap: on
+        # Windows the rename fails outright while one is still open.
+        close_env(env)
+        _replace_game_file(tmp, assets_path, "mesh")
         method = "rebuild"
         warnings.append(
             f"'{os.path.basename(assets_path)}' was rebuilt rather than patched in "
@@ -1487,6 +1595,8 @@ def apply_mesh_mod(assets_path, path_id, geo, allow_rebuild=False,
             f"{obj.byte_size:,}, so it can't be patched in place. Enable the "
             f"rebuild fallback to write it anyway.")
 
+    # don't hand the next mod in the run a locked game file
+    close_env(env)
     return {"name": name, "method": method, "warnings": warnings,
             "vertices": geo.vertex_count, "triangles": geo.triangle_count,
             "streamed": streamed, "assets_file": assets_path, "path_id": path_id}
