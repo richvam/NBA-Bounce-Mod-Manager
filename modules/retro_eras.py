@@ -16,8 +16,9 @@ everywhere in the UI.
 import json
 import os
 
-ERAS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "retro_court_eras.json")
+import app_paths                        # every path in the app comes from here
+
+ERAS_FILE = app_paths.data("retro_court_eras.json")
 
 DEFAULT_VARIANT = "default"
 ALL_VARIANTS = "__all__"

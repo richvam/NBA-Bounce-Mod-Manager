@@ -1,7 +1,7 @@
 """
 tools_mesh_selftest.py -- checks the mesh pipeline without a copy of the game.
 
-    python tools_mesh_selftest.py
+    python tools/mesh_selftest.py
 
 Covers the parts that are easy to get quietly wrong:
 
@@ -30,7 +30,9 @@ import struct
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# the modules this exercises live in modules/, one level up from tools/
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modules"))
 
 import mesh_manager as mm
 

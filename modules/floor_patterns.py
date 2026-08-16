@@ -72,11 +72,11 @@ except ImportError:                                   # pragma: no cover
     tk = ttk = filedialog = messagebox = ImageTk = None
     HAVE_TK = False
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_DIR = os.path.join(APP_DIR, "floor_patterns")
+import app_paths                        # every path in the app comes from here
+CACHE_DIR = app_paths.user("floor_patterns")
 CUSTOM_DIR = os.path.join(CACHE_DIR, "custom")
-STATE_FILE = os.path.join(APP_DIR, "floor_patterns.json")
-JOURNAL_FILE = os.path.join(APP_DIR, "floor_patterns_journal.json")
+STATE_FILE = app_paths.user("floor_patterns.json")
+JOURNAL_FILE = app_paths.user("floor_patterns_journal.json")
 
 MAT_FILE = "sharedassets1.assets"
 DONOR_FILE = "resources.assets"
@@ -1192,7 +1192,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     gp = a.path
     if not gp:
-        cfg = os.path.join(APP_DIR, "config.json")
+        cfg = app_paths.user("config.json")
         if os.path.exists(cfg):
             gp = json.load(open(cfg, encoding="utf-8")).get("game_data_path")
     if a.selftest:

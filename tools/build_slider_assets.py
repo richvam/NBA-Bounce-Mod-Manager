@@ -27,9 +27,14 @@ import json
 import os
 import sys
 
+# the modules this imports live in modules/, one level up from tools/
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modules"))
+
+import app_paths
 from slider_manager import SliderManager
 
-OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUT_DIR = app_paths.DATA_DIR          # the catalogs it writes ship in data/
 
 # ---------------------------------------------------------------- CPU sliders
 # (id, label, category, [field paths], clamp)  -- endpoints auto-derived

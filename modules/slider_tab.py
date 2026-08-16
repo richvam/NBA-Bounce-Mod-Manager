@@ -473,8 +473,8 @@ def open_gameplay_sliders(parent, game_data_path: str, theme: dict | None = None
 
 if __name__ == "__main__":
     import json
-    here = os.path.dirname(os.path.abspath(__file__))
-    cfg = os.path.join(here, "config.json")
+    import app_paths
+    cfg = app_paths.user("config.json")
     path = ""
     if len(sys.argv) > 1:
         path = sys.argv[1]

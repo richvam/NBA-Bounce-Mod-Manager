@@ -205,7 +205,7 @@ mesh mod (it doesn't undo anything already written — use Restore for that).
 ## Testing without the game
 
 ```
-python tools_mesh_selftest.py
+python tools/mesh_selftest.py
 ```
 
 Runs 75 checks: every exporter and importer round-trip, the vertex buffer this
