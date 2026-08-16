@@ -10,7 +10,7 @@ Import it and drop one button into your top bar:
     ttk.Button(top, text="🔊 Audio", style="Soft.TButton",
                command=lambda: open_audio_window(self)).pack(side="right", ...)
 
-It reads config.json (same folder) for game_data_path / mods_folder / theme,
+It reads user/config.json for game_data_path / mods_folder / theme,
 so it works whether it's launched from the main app or on its own.
 
 --------------------------------------------------------------------------
@@ -69,8 +69,8 @@ from tkinter import ttk, filedialog, messagebox
 import UnityPy
 
 # ── Paths / config ─────────────────────────────────────────────────────────────
-APP_DIR         = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE     = os.path.join(APP_DIR, "config.json")
+import app_paths                        # every path in the app comes from here
+CONFIG_FILE     = app_paths.user("config.json")
 BACKUP_SUFFIX   = ".original_backup"
 AUDIO_META_FILE = "audio_mods.json"     # queued replacements
 LANGUAGES_FILE  = "languages.json"      # per-clip language tags (manual / detected)

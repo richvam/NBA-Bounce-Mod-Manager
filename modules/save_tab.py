@@ -500,7 +500,8 @@ def open_save_editor(parent, game_data_path, theme=None):
 if __name__ == "__main__":
     import json
     cfg = {}
-    cfgp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    import app_paths
+    cfgp = app_paths.user("config.json")
     if os.path.exists(cfgp):
         try:
             with open(cfgp, encoding="utf-8") as f:

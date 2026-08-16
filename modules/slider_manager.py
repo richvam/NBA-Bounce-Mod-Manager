@@ -36,6 +36,8 @@ from typing import Any
 
 import UnityPy
 
+import app_paths                        # every path in the app comes from here
+
 
 def _ensure_dnfile():
     """dnfile reads the field layout out of Assembly-CSharp.dll.
@@ -399,9 +401,8 @@ class SliderManager:
             raise FileNotFoundError(dll)
         self.asm = Assembly(dll)
         self.walker = Walker(self.asm)
-        here = os.path.dirname(os.path.abspath(__file__))
-        self.catalog = json.load(open(catalog_path or os.path.join(here, "sliders_catalog.json"), encoding="utf-8"))
-        self.presets = json.load(open(presets_path or os.path.join(here, "presets.json"), encoding="utf-8"))
+        self.catalog = json.load(open(catalog_path or app_paths.data("sliders_catalog.json"), encoding="utf-8"))
+        self.presets = json.load(open(presets_path or app_paths.data("presets.json"), encoding="utf-8"))
         self.objs: dict[str, list[GameObj]] = {}
         self.roles: dict[str, GameObj] = {}
         self.values: dict[str, float] = {}      # slider_id -> ui 0..100

@@ -923,9 +923,9 @@ def open_mesh_browser(parent, cfg, theme=None):
 if __name__ == "__main__":
     import json
 
-    here = os.path.dirname(os.path.abspath(__file__))
+    import app_paths
     try:
-        with open(os.path.join(here, "config.json"), encoding="utf-8") as f:
+        with open(app_paths.user("config.json"), encoding="utf-8") as f:
             cfg = json.load(f)
     except Exception:
         cfg = {"game_data_path": "", "mods_folder": ""}

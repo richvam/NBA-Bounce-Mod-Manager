@@ -2,6 +2,15 @@ import sys
 import subprocess
 import os
 
+# ── Where everything lives ─────────────────────────────────────────────────────
+# app.py is the only Python file at the top of the folder; the feature modules
+# live in modules/, their catalogs in data/, the guides in docs/, developer
+# scripts in tools/, and everything this app writes in user/. Putting modules/
+# on the import path first means every module below (and every module they
+# import from each other) is still found by its plain name.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "modules"))
+
 # ── Self-installer ─────────────────────────────────────────────────────────────
 REQUIRED_PACKAGES = [
     "attrs", "lz4", "brotli", "fsspec", "etcpak",
@@ -52,14 +61,14 @@ import json, shutil, threading, re, struct
 from datetime import datetime
 from PIL import Image, ImageTk, ImageGrab
 import UnityPy
+import app_paths
 from audio_manager import AudioManagerFrame, THEMES
 import retro_eras
 import sprite_crop
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
-APP_DIR        = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE    = os.path.join(APP_DIR, "config.json")
+CONFIG_FILE    = app_paths.user("config.json")
 MODS_META_FILE = "mods.json"
 BACKUP_SUFFIX  = ".original_backup"
 
@@ -1281,7 +1290,7 @@ class ModManagerApp(tk.Tk):
                      justify="left",
                      text=f"Meshes tab unavailable:\n{e}\n\nmesh_tab.py, "
                           f"mesh_view.py and mesh_manager.py should sit in the "
-                          f"same folder as app.py.").pack(anchor="w", padx=20, pady=20)
+                          f"modules folder next to app.py.").pack(anchor="w", padx=20, pady=20)
 
     # ── Saves tab ─────────────────────────────────────────────────────────────
     def _build_saves_tab(self, notebook):
@@ -1316,8 +1325,8 @@ class ModManagerApp(tk.Tk):
             tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
                      justify="left",
                      text=f"Saves tab unavailable:\n{e}\n\nsave_tab.py and "
-                          f"save_manager.py should sit in the same folder as "
-                          f"app.py.").pack(anchor="w", padx=20, pady=20)
+                          f"save_manager.py should sit in the modules folder "
+                          f"next to app.py.").pack(anchor="w", padx=20, pady=20)
 
     # ── Home ──────────────────────────────────────────────────────────────────
     def _build_home_tab(self, notebook):
@@ -1986,7 +1995,7 @@ class ModManagerApp(tk.Tk):
             messagebox.showerror(
                 "Floor Patterns unavailable",
                 f"Could not load floor_patterns.py:\n\n{e}\n\n"
-                f"It should sit in the same folder as app.py."); return
+                f"It should sit in the modules folder next to app.py."); return
         open_floor_patterns(self, gp, theme={
             "bg":     self.C["bg"],      # matches _apply_styles / current theme
             "panel":  self.C["panel"],
@@ -2017,8 +2026,9 @@ class ModManagerApp(tk.Tk):
             messagebox.showerror(
                 "Gameplay Sliders unavailable",
                 f"Could not load slider_tab.py:\n\n{e}\n\n"
-                f"slider_tab.py, slider_manager.py, sliders_catalog.json and "
-                f"presets.json should all sit in the same folder as app.py."); return
+                f"slider_tab.py and slider_manager.py should sit in the "
+                f"modules folder next to app.py, with sliders_catalog.json and "
+                f"presets.json in the data folder."); return
         open_gameplay_sliders(self, gp, theme={
             "bg":     self.C["bg"],      # matches _apply_styles / current theme
             "panel":  self.C["panel"],

@@ -138,7 +138,7 @@ Display modes: **Shaded**, **Textured** (pick any PNG with **Texture…** — fo
 
 Skinned meshes (marked 🦴) keep animating: bone weights are copied from the nearest original vertex, since a model you made in Blender won't have the game's rigging.
 
-Full details, modelling rules and troubleshooting: **[MESH_MODDING_GUIDE.md](MESH_MODDING_GUIDE.md)**.
+Full details, modelling rules and troubleshooting: **[docs/MESH_MODDING_GUIDE.md](docs/MESH_MODDING_GUIDE.md)**.
 
 ---
 
@@ -244,25 +244,52 @@ Open **Settings** from the top bar at any time.
 
 ## File Structure
 
+Everything you actually run sits at the top; the rest is filed underneath, and
+you never need to open any of it — every tool is reachable from the app.
+
 ```
 nba-bounce-mod-manager/
-├── app.py                              # Main app: Home / Textures / Audio tabs, Settings
-├── audio_manager.py                    # Audio tab: playback, language tags, replacements
-├── mesh_tab.py                         # Meshes tab: browser, viewer, import/export UI
-├── mesh_view.py                        # Software 3D renderer for the mesh viewport
-├── mesh_manager.py                     # Mesh decode/encode, OBJ/GLB/PLY/STL, writeback
-├── tools_mesh_selftest.py              # Mesh pipeline self-test (no game files needed)
-├── sprite_crop.py                      # Widens baked sprite crops so replacements aren't cut off
-├── floor_patterns.py                   # Floor Patterns tool
-├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
-├── sliders_catalog.json / presets.json # Slider definitions and difficulty presets
-├── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
-├── unlockables_catalog.json            # Auto-generated: cached unlockable ids from level1
-├── SETUP_AND_RUN.bat                   # First-time setup + launch
-├── RUN.bat                             # Quick launch (after first setup)
-├── config.json                         # Auto-generated: saved paths and theme preference
-└── README.md
+├── SETUP_AND_RUN.bat            # First-time setup + launch  ← start here
+├── RUN.bat                      # Quick launch (after first setup)
+├── app.py                       # The app itself: every tab and tool
+├── README.md / CHANGELOG.md / LICENSE
+│
+├── modules/                     # What app.py is built from
+│   ├── app_paths.py             #   Where every file lives (the folders below)
+│   ├── audio_manager.py         #   Audio tab: playback, language tags, replacements
+│   ├── mesh_tab.py              #   Meshes tab: browser, viewer, import/export UI
+│   ├── mesh_view.py             #   Software 3D renderer for the mesh viewport
+│   ├── mesh_manager.py          #   Mesh decode/encode, OBJ/GLB/PLY/STL, writeback
+│   ├── sprite_crop.py           #   Widens baked sprite crops so replacements aren't cut off
+│   ├── floor_patterns.py        #   Floor Patterns tool
+│   ├── retro_eras.py            #   Names each court's throwback era
+│   ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
+│   └── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
+│
+├── data/                        # Catalogs that ship with the app (read-only)
+│   ├── sliders_catalog.json / presets.json # Slider definitions and difficulty presets
+│   └── retro_court_eras.json    #   Era labels for each retro court variant
+│
+├── docs/                        # The guides
+│   ├── MESH_MODDING_GUIDE.md
+│   └── NBA_Bounce_Team_Identity_Texture_Guide.md / .pdf
+│
+├── tools/                       # Developer scripts — the app never runs these
+│   ├── mesh_selftest.py         #   Mesh pipeline self-test (no game files needed)
+│   ├── build_slider_assets.py   #   Regenerates the slider catalog from the game DLL
+│   └── build_retro_eras.py      #   Regenerates the retro era labels
+│
+└── user/                        # Everything the app WRITES — yours, never overwritten
+    ├── config.json              #   Saved paths and theme preference
+    ├── floor_patterns.json      #   Which pattern each court is set to
+    ├── unlockables_catalog.json #   Cached unlockable ids read from level1
+    └── save_backups/            #   Fallback copies of your .sav
 ```
+
+Updating the app is a matter of replacing everything except `user/` — your
+paths, court choices and save backups live only in there. If you're upgrading
+from v2.x, the files that used to sit next to `app.py` are moved into `user/`
+automatically the first time you launch v3.
 
 **Your Mods Folder** (location you choose in Settings):
 
@@ -342,7 +369,7 @@ All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` i
 | **Game crashes after applying** | Click Restore Game Files (or Restore Audio) to revert, then check your replacement file is valid |
 | **Audio replacement doesn't seem to change anything** | Some clips stream continuously and may ignore replacement; see the note under Audio above |
 | **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Mods / Apply Audio Mods again |
-| **A mesh replacement is over budget, invisible, or inside-out** | See the troubleshooting table in [MESH_MODDING_GUIDE.md](MESH_MODDING_GUIDE.md) |
+| **A mesh replacement is over budget, invisible, or inside-out** | See the troubleshooting table in [docs/MESH_MODDING_GUIDE.md](docs/MESH_MODDING_GUIDE.md) |
 | **Court Colors / Floor Patterns changes not visible** | Changes only appear after fully quitting and relaunching the game |
 
 ---

@@ -1,4 +1,10 @@
-# ── User-specific config (auto-generated on first run) ────────────────────────
+# ── Everything the app writes (settings, caches, backups) ─────────────────────
+# Since v3 this all lives in one folder, so an update can replace every other
+# file without touching anything of the user's.
+user/
+
+# Same files where v2.x left them, next to app.py -- still ignored so upgrading
+# in place can't commit them before they're migrated into user/.
 config.json
 
 # ── Mod data (personal to each user's install, lives in their chosen Mods Folder) ──

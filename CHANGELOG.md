@@ -39,7 +39,7 @@ textures and audio already were.
   vertex borrows them from the closest original vertex, so the replacement still
   follows the skeleton.
 
-- `tools_mesh_selftest.py`, 75 checks that need no copy of the game: every
+- `tools/mesh_selftest.py`, 75 checks that need no copy of the game: every
   exporter/importer round-trip, the vertex buffer this app writes decoded back
   by UnityPy's own mesh reader over a full Unity 6 channel layout (packed
   colours and bone weights included), index padding, submesh windows, the
@@ -48,7 +48,7 @@ textures and audio already were.
   of a .resS, an unrigged replacement written back, decoded again, then
   reverted from the backup.
 
-- `MESH_MODDING_GUIDE.md` with the modelling rules, the budget explanation and a
+- `docs/MESH_MODDING_GUIDE.md` with the modelling rules, the budget explanation and a
   troubleshooting table.
 
 ### How mesh replacement is written
@@ -72,6 +72,21 @@ it is allowed to replace anything; if the check fails, the write is abandoned
 and the game file is left untouched.
 
 ### Changed
+
+- **The folder is tidy now.** Only what you actually run sits at the top --
+  `SETUP_AND_RUN.bat`, `RUN.bat` and `app.py` -- and everything else is filed
+  underneath: the feature modules in `modules/`, the catalogs that ship with the
+  app in `data/`, the guides in `docs/`, developer scripts in `tools/`, and
+  everything the app writes in `user/`. Nothing about how you use the app
+  changes; every tool is still reached from `app.py`.
+
+  A single `modules/app_paths.py` now answers where any file lives, instead of
+  each module assuming everything sits beside it. Because every written file is
+  under `user/`, updating the app means replacing everything except that one
+  folder, and your paths, court assignments and save backups are never in the
+  way of it. Upgrading in place from v2.x needs nothing from you: the state
+  files that used to live next to `app.py` are moved into `user/` the first
+  time v3 starts.
 
 - **"Apply Texture Mods" is now "Apply Mods", and applies meshes too.** Textures
   and meshes in the same `.assets` file share one `.resS` companion, and both

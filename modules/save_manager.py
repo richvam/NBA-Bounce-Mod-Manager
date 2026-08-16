@@ -65,8 +65,8 @@ import shutil
 import struct
 import time
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CATALOG_CACHE = os.path.join(APP_DIR, "unlockables_catalog.json")
+import app_paths                        # every path in the app comes from here
+CATALOG_CACHE = app_paths.user("unlockables_catalog.json")
 
 SAVE_COMPANY = "UnfinishedPixel"
 SAVE_PRODUCT = "NBA Bounce"
@@ -538,7 +538,7 @@ def find_save_files(save_dir=None):
 def default_backup_dir():
     d = find_save_dir()
     if not d:
-        return os.path.join(APP_DIR, "save_backups")
+        return app_paths.user("save_backups")
     # deliberately OUTSIDE the synced folder so backups don't burn cloud quota
     return os.path.join(os.path.dirname(os.path.dirname(d)),
                         "NBA_Bounce_Save_Backups")
