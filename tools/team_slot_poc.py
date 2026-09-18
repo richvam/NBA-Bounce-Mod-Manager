@@ -68,6 +68,7 @@ USAGE
     python tools/team_slot_poc.py                     inspect only, writes nothing
     python tools/team_slot_poc.py --apply             do it
     python tools/team_slot_poc.py --apply --color 00c853 --name "Pythons"
+    python tools/team_slot_poc.py --verify            is it actually on disk?
     python tools/team_slot_poc.py --revert            put the backups back
 
 Inspect mode prints everything the apply would rely on -- the source container,
@@ -634,6 +635,102 @@ def build_clone_bytes(raw, id_offset, new_id, source_name, new_name, rgba,
     return raw
 
 
+def verify(game_data, shared, level1, args):
+    """Check the game files themselves for the change, and say which half (if
+    either) is actually there.
+
+    Worth its own mode because "I see no difference in game" has several very
+    different causes: the apply never ran, it ran against a different folder,
+    Steam restored the files afterwards, the clone landed but nothing points at
+    it, or everything is in place and the game ignores it -- which would be a
+    real finding about the game rather than a mistake. Each of those leaves a
+    different fingerprint on disk.
+    """
+    import datetime
+
+    print(f"Game folder : {game_data}")
+    for path in (shared, level1):
+        bak = path + BACKUP_SUFFIX
+        st = os.stat(path)
+        when = datetime.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+        if os.path.exists(bak):
+            bst = os.stat(bak)
+            bwhen = datetime.datetime.fromtimestamp(bst.st_mtime).strftime("%Y-%m-%d %H:%M")
+            same = "SAME SIZE as the backup" if bst.st_size == st.st_size \
+                   else f"{st.st_size - bst.st_size:+,} bytes vs the backup"
+            print(f"{os.path.basename(path):<22} {st.st_size:>14,} b  {when}   "
+                  f"backup {bwhen}, {same}")
+        else:
+            print(f"{os.path.basename(path):<22} {st.st_size:>14,} b  {when}   "
+                  f"NO {BACKUP_SUFFIX} -- --apply has never run on this folder")
+
+    script_pid = find_container_script(game_data)
+    containers = read_containers(game_data, script_pid)
+    try:
+        n_strings, ids = locate_unique_id(containers)
+    except PocError as exc:
+        print(f"\nCouldn't read the unique IDs: {exc}")
+        ids = {}
+    print(f"\nContainers  : {len(containers)} in {CONTAINER_ASSETS_FILE}")
+    extra = {n: v for n, v in ids.items() if v == args.new_id}
+    if extra:
+        for name, v in extra.items():
+            print(f"  clone     : FOUND -- '{name}' holds unique ID {v}")
+    else:
+        print(f"  clone     : NOT FOUND -- no container holds unique ID "
+              f"{args.new_id}")
+
+    # the pointer arrays, straight out of level1
+    import UnityPy
+    container_pids = {c["path_id"] for c in containers.values()}
+    env = UnityPy.load(level1)
+    arrays, pointed = [], False
+    try:
+        for obj in env.objects:
+            if obj.type.name != "MonoBehaviour":
+                continue
+            try:
+                raw = obj.get_raw_data()
+            except Exception:
+                continue
+            for off, count, file_id in scan_pointer_arrays(raw, container_pids):
+                arrays.append((obj.path_id, count))
+                entries = [struct.unpack_from("<iq", raw, off + 4 + k * 12)[1]
+                           for k in range(count)]
+                if args.new_path_id in entries:
+                    pointed = True
+    finally:
+        close_env(env)
+    print(f"\nTeam lists in {MANAGER_SCENE_FILE}: "
+          + (", ".join(f"{c} pointers" for _p, c in sorted(arrays,
+                                                           key=lambda a: -a[1]))
+             or "none found"))
+    print(f"  33rd slot : "
+          + ("FOUND -- a list points at the clone"
+             if pointed else
+             f"NOT FOUND -- no list points at path_id {args.new_path_id}"))
+
+    biggest = max((c for _p, c in arrays), default=0)
+    print("\nVerdict:")
+    if extra and pointed:
+        print("  Both halves are on disk. If the team-select grid still shows "
+              "the stock tiles, the game is loading these files from somewhere "
+              "else (a Steam re-verify restores them; check the mtimes above) "
+              "or reading the team list from a file this script didn't touch.")
+    elif extra and not pointed:
+        print("  The clone exists but nothing points at it, so the game never "
+              "sees it. The level1 half of the apply did not land.")
+    elif not extra and biggest > 32:
+        print("  A team list is longer than stock but the clone isn't in "
+              f"{CONTAINER_ASSETS_FILE}: the pointer is dangling. Revert.")
+    else:
+        print("  Neither half is on disk. Either --apply was never run, it ran "
+              "against a different folder than the one above, or the files "
+              "were restored afterwards (Steam > Verify integrity does exactly "
+              "that). Re-run with --apply and keep the console output.")
+    return 0
+
+
 def run(args):
     try:
         import UnityPy                                          # noqa: F401
@@ -656,6 +753,9 @@ def run(args):
         print("Restored: " + (", ".join(done) if done else "nothing -- no "
               f"{BACKUP_SUFFIX} files found."))
         return 0
+
+    if args.verify:
+        return verify(game_data, shared, level1, args)
 
     print(f"Game folder : {game_data}")
     script_pid = find_container_script(game_data)
@@ -761,6 +861,9 @@ def main(argv=None):
                                        "(default: whatever the manager is set to)")
     p.add_argument("--apply", action="store_true",
                    help="actually write; without this it only inspects")
+    p.add_argument("--verify", action="store_true",
+                   help="read the game files back and report whether the clone "
+                        "and the 33rd pointer are actually there")
     p.add_argument("--revert", action="store_true",
                    help="restore the .teamslot_backup copies and exit")
     p.add_argument("--source", default=DEFAULT_SOURCE,

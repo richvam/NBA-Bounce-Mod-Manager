@@ -17,6 +17,7 @@ Two developer scripts, both under `tools/` (nothing in the app runs them):
 python tools/team_slot_selftest.py      # sanity check, no game needed
 python tools/team_slot_poc.py           # inspect only — writes nothing
 python tools/team_slot_poc.py --apply   # do it
+python tools/team_slot_poc.py --verify  # read the game files back — is it there?
 python tools/team_slot_poc.py --revert  # put the backups back
 ```
 
@@ -31,6 +32,25 @@ would be wrong too.
 
 Useful flags: `--source` (which team to clone), `--name`, `--color RRGGBB`,
 `--new-id`, `--game-data`.
+
+## Nothing changed in game?
+
+Run `--verify`. It reads the game files back and reports which half of the
+change is on disk, so "no difference in game" splits into causes that look
+different:
+
+- **Neither half there** — the apply never ran, ran against a different folder,
+  or the files were restored afterwards. Steam ▸ Properties ▸ Installed Files ▸
+  *Verify integrity* undoes this mod completely, and so does a game update.
+- **Clone there, no pointer** — the `level1` half didn't land; the game never
+  sees the team.
+- **Both there but the grid is stock** — that's a finding about the game, not a
+  mistake: it's reading the team list from somewhere this script doesn't touch.
+
+The team-select grid draws the bundled teams and the four classic teams in one
+run, so a 33rd bundled team pushes Nets/Bobcats/Sonics/Grizzlies along by one
+tile. If that row hasn't moved, the change isn't live — no need to hunt for a
+new tile.
 
 ## What it changes
 
