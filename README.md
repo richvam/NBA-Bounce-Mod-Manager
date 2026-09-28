@@ -2,7 +2,7 @@
 
 > A Windows desktop app for modding **NBA Bounce** (Unity 6): textures, audio, 3D meshes, court floors, court colors, and gameplay sliders, all from one tool, without ever touching a hex editor.
 
-![Version](https://img.shields.io/badge/version-3.0.0-orange)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
 ![Unity](https://img.shields.io/badge/Unity-6000.0.37f1-black?logo=unity)
@@ -23,6 +23,7 @@
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
 | Saves | Unlock mascots, jerseys, logos, balls and trails by editing your save file |
+| Teams | **New in v3.1:** add brand-new custom teams to the game, rename and recolor any team, borrow logos/jerseys/courts, and rearrange the team-select grid |
 | Dark / Light mode | NBA-branded "Arena Night" (dark) and "Broadcast Day" (light) themes, switchable in Settings |
 | Automatic backups | Every tool backs up the original game files before its first write, and can restore them any time |
 
@@ -230,6 +231,54 @@ the old copy back. It looks exactly like the edit did nothing.
 
 ---
 
+## Teams
+
+**New in v3.1.** Add your own teams to NBA Bounce — a 1996 Bulls, a hometown
+squad, an expansion team — and they show up on the team-select screen next to
+the stock 32.
+
+### Edit Teams
+
+Pick any team in the list (stock or custom) to change:
+
+- **Name, nickname and abbreviation** — what the versus panel and scoreboard show
+- **Court colors** — floor, apron, painted area, key outline, 3-point line
+- **Art** — *Borrow* another team's logos, icon, court or jerseys, *Preview*
+  first, or *Detach* to give a team its own editable copies. Detached art is
+  renamed `CUSTOM_<team>_…`, so type `CUSTOM_` in the Textures tab's search box
+  to find it and replace it with your own PNGs.
+
+Click **Save Changes** to write, or **Revert Fields** to discard.
+
+### Add Teams
+
+**Add Teams…** creates a new team as a copy of an existing one (the donor),
+with its own city, nickname, abbreviation and color. It starts with the donor's
+logo, jerseys and court — use Borrow / Detach and the Textures tab to make it
+its own. **Remove Added Teams** takes every custom team back out.
+
+> Adding or removing teams rebuilds `sharedassets1.assets` and `level1`. Every
+> queued texture and audio mod is re-applied automatically afterwards. **Close
+> NBA Bounce and quit Steam first, and back up your save** before playing with
+> custom teams.
+
+### Layout
+
+A live mockup of the team-select screen. Move the grid, shrink it so more teams
+fit, change the column count, and reorder the teams. **Reset** puts every team
+file back to stock and repairs your save.
+
+### Advanced (edits game code — off by default)
+
+Past 32 teams, pressing Down in the middle of the grid jumps to *Random*, and
+the column count / team order are constants in the game's code. The
+**Grid navigation fix**, column count and custom order patch
+`Assembly-CSharp.dll` with same-length byte swaps. They only run after you tick
+*"I understand this edits the game's code"*, each has an **Undo**, and a Steam
+update or *Verify Integrity of Game Files* silently undoes them — just re-apply.
+
+---
+
 ## Settings
 
 Open **Settings** from the top bar at any time.
@@ -264,7 +313,8 @@ nba-bounce-mod-manager/
 │   ├── floor_patterns.py        #   Floor Patterns tool
 │   ├── retro_eras.py            #   Names each court's throwback era
 │   ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
-│   └── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
+│   ├── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
+│   └── team_tab.py / team_manager.py / team_layout.py  # Teams tab: custom teams, art, grid layout
 │
 ├── data/                        # Catalogs that ship with the app (read-only)
 │   ├── sliders_catalog.json / presets.json # Slider definitions and difficulty presets
@@ -277,7 +327,8 @@ nba-bounce-mod-manager/
 ├── tools/                       # Developer scripts — the app never runs these
 │   ├── mesh_selftest.py         #   Mesh pipeline self-test (no game files needed)
 │   ├── build_slider_assets.py   #   Regenerates the slider catalog from the game DLL
-│   └── build_retro_eras.py      #   Regenerates the retro era labels
+│   ├── build_retro_eras.py      #   Regenerates the retro era labels
+│   └── container_dump.py        #   Dumps a team container's fields (for bug reports)
 │
 └── user/                        # Everything the app WRITES — yours, never overwritten
     ├── config.json              #   Saved paths and theme preference

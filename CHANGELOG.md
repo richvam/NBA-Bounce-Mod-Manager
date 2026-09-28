@@ -1,5 +1,51 @@
 # Changelog
 
+## v3.1.0
+
+### What's New
+
+- **New Teams tab: add custom teams to the game.** Create brand-new teams with
+  their own name, abbreviation, colors and art, selectable on the team-select
+  screen alongside the stock 32. Asset-file patching only -- no mod loader,
+  no DLL injection required.
+
+### Added
+
+- **Add Teams / Remove Added Teams.** A new team starts as a copy of a donor
+  team under a fresh unique ID. Adding or removing rebuilds
+  `sharedassets1.assets` and `level1`; every rebuild is verified
+  object-by-object against the original and discarded unless every existing
+  object survived intact. Queued texture and audio mods are re-applied
+  automatically afterwards.
+- **Rename and recolor any team** (stock or custom) with in-place,
+  length-preserving patches that can't disturb queued mods.
+- **Borrow / Preview / Detach art.** Swap logos, icon and court between teams
+  instantly; borrow jerseys where the name fits; or detach a team's art into
+  its own `CUSTOM_<team>_...` textures, searchable in the Textures tab.
+- **Layout editor** with a live mockup of the team-select screen: grid
+  position, size, column count and team order, plus a one-click Reset to stock
+  that also repairs saves referencing removed teams.
+- **Advanced (opt-in) grid navigation fix** for 33+ teams, so pressing Down no
+  longer jumps to Random. Edits `Assembly-CSharp.dll`, requires explicit
+  consent, and has its own Undo.
+- Teams card on the Home screen; app version shown in the window title.
+
+### Fixed
+
+- Removing custom teams left their `CUSTOM_*` textures listed in the Textures
+  tab and their mods queued, so the next Apply All Mods failed with "texture
+  not found". Orphaned mods are now purged (the path check compared
+  differently-slashed paths and matched nothing), the texture list reloads
+  after any team rebuild, and Apply All drops stale custom-team mods up front.
+
+### Changed
+
+- Team-slot proof-of-concept scripts (`team_slot_poc.py`,
+  `team_slot_selftest.py`, `nav_patch.py`, `TEAM_SLOT_POC.md`) retired -- their
+  work now lives in `modules/team_manager.py` and the Teams tab.
+- `.gitignore` now covers the Teams tab's backups (`.teamslot_backup`,
+  `.gridscale_backup`, `.navpatch_backup`).
+
 ## v3.0.0
 
 ### What's New

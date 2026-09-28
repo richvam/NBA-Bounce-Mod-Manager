@@ -68,6 +68,7 @@ import sprite_crop
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
+APP_VERSION    = "3.1.0"
 CONFIG_FILE    = app_paths.user("config.json")
 MODS_META_FILE = "mods.json"
 BACKUP_SUFFIX  = ".original_backup"
@@ -286,13 +287,55 @@ def extract_textures_from_file(assets_path):
     return textures
 
 def get_texture_image(assets_path, path_id):
-    source = assets_path + BACKUP_SUFFIX if os.path.exists(assets_path + BACKUP_SUFFIX) else assets_path
-    env = UnityPy.load(source)
-    for obj in env.objects:
-        if obj.path_id == path_id:
-            data = obj.read()
-            return data.image   # PIL Image
+    """The texture's ORIGINAL pixels, for the left-hand preview.
+
+    Reads the .original_backup when there is one, so the "Original" pane shows
+    what the game shipped rather than a mod already applied. Objects this app
+    CREATED -- the CUSTOM_* copies the Teams tab makes when detaching art --
+    exist only in the live file, so the backup lookup finds nothing and the
+    preview used to sit on "Loading..." forever. Falling back to the live file
+    is what makes those previewable: for a copy, the live pixels ARE the
+    original as far as the user is concerned.
+    """
+    backup = assets_path + BACKUP_SUFFIX
+    sources = [backup, assets_path] if os.path.exists(backup) else [assets_path]
+    for source in sources:
+        try:
+            env = UnityPy.load(source)
+        except Exception:
+            continue
+        for obj in env.objects:
+            if obj.path_id == path_id:
+                try:
+                    return obj.read().image   # PIL Image
+                except Exception:
+                    return None
     return None
+
+
+def _norm_path(p):
+    """Canonical form of a path for equality checks (case, slashes, ..)."""
+    return os.path.normcase(os.path.normpath(os.path.abspath(p or "")))
+
+
+def mod_targets_exist(assets_path, path_ids):
+    """Which of these path_ids are still in the file.
+
+    Objects this app added can go away again -- Remove Added Teams restores the
+    pre-clone backup, and every CUSTOM_* copy in it disappears. The mods that
+    targeted them must go too, or the next apply either fails outright or, far
+    worse, writes those PNGs into whatever object has since been given the same
+    path_id. New copies start numbering from the same base, so a texture from a
+    deleted team really can land on an unrelated new one.
+    """
+    wanted = set(path_ids)
+    if not wanted or not os.path.isfile(assets_path):
+        return set()
+    try:
+        env = UnityPy.load(assets_path)
+    except Exception:
+        return wanted           # unreadable: assume present, change nothing
+    return {o.path_id for o in env.objects if o.path_id in wanted}
 
 COURT_DECAL_ASSETS_FILE = "resources.assets"
 COURT_DECAL_PREFIX      = "txt_bounce_court_"
@@ -365,9 +408,40 @@ def _find_ress_file(assets_path, stream_path):
     return None
 
 
-def _get_encode_format(original_format_id):
+def _block_compressed(format_id):
+    """Is this a block-compressed format, i.e. one that needs multiple-of-four
+    dimensions?
+
+    Block formats encode 4x4 pixel blocks. Unity REFUSES to use one on a texture
+    whose width or height is not a multiple of four -- it logs "requires
+    multiple-of-four dimensions", silently decodes as RGBA32 instead, and then
+    expects width*height*4 bytes. If we appended block-compressed bytes (a
+    quarter of that), the streaming read runs off the end of the .resS and the
+    texture fails to load entirely:
+
+        async texture load: failed to load <name> from sharedassets1.assets.resS
+
+    which is a black screen at startup, not a missing logo.
+    """
+    from UnityPy.enums import TextureFormat as TF
+    block = set()
+    for name in ("DXT1", "DXT1Crunched", "DXT5", "DXT5Crunched", "BC7", "BC6H",
+                 "BC4", "BC5", "ETC_RGB4", "ETC2_RGB", "ETC2_RGBA8",
+                 "ASTC_4x4", "ASTC_RGB_4x4", "ASTC_RGBA_4x4"):
+        fmt = getattr(TF, name, None)
+        if fmt is not None:
+            block.add(fmt.value)
+    return format_id in block
+
+
+def _get_encode_format(original_format_id, size=None):
     """
     Returns (encode_as_fmt, write_format_id) for the given original format.
+
+    `size` is (width, height) of the REPLACEMENT image. When it is not a
+    multiple of four and the target format is block-compressed, this returns
+    RGBA32 instead -- matching what the engine would do anyway, and keeping the
+    bytes we append the same length as the bytes it will try to read.
 
     Rules:
     - DXT5/DXT5Crunched -> encode BC7, write BC7 format ID (same 1bpp size, better quality)
@@ -379,6 +453,9 @@ def _get_encode_format(original_format_id):
     Writing BC7 bytes but leaving format=DXT5Crunched produces garbage.
     """
     from UnityPy.enums import TextureFormat as TF
+    if (size and _block_compressed(original_format_id)
+            and (size[0] % 4 or size[1] % 4)):
+        return TF.RGBA32, TF.RGBA32.value
     DXT5_FAMILY = {TF.DXT5.value, TF.DXT5Crunched.value}
     DXT1_FAMILY = {TF.DXT1.value, TF.DXT1Crunched.value}
     if original_format_id in DXT5_FAMILY:
@@ -438,8 +515,12 @@ def apply_single_mod(assets_path, path_id, replacement_png_path, ress_reset=None
     ress_path   = _find_ress_file(assets_path, stream_path) if stream_path else None
     has_ress    = bool(ress_path and os.path.exists(ress_path))
 
-    # Get matching encode format + format ID (both must match)
-    encode_fmt, write_format_id = _get_encode_format(orig_format)
+    # Get matching encode format + format ID (both must match). The replacement
+    # image's dimensions matter: a block-compressed format on a texture that is
+    # not a multiple of four in both directions makes the engine fall back to
+    # RGBA32 and then read four times as many bytes as we wrote.
+    encode_fmt, write_format_id = _get_encode_format(
+        orig_format, (new_image.width, new_image.height))
     enc_bytes, _ = image_to_texture2d(new_image, encode_fmt)
 
     if has_ress:
@@ -489,7 +570,8 @@ def apply_single_mod(assets_path, path_id, replacement_png_path, ress_reset=None
         raise ValueError(
             f"Size mismatch for '{target_obj.peek_name()}': "
             f"original={original_byte_size}b new={len(new_obj_bytes)}b. "
-            f"orig_format={orig_format} encode={encode_fmt.name}. Cannot patch in-place."
+            f"orig_format={orig_format} encode={encode_fmt.name}. "
+            f"Cannot patch in-place."
         )
 
     # Splice new bytes into the original file — everything else bit-for-bit identical
@@ -1163,12 +1245,13 @@ class ModManagerApp(tk.Tk):
         self.cfg               = load_config()
         self.C                 = THEMES.get(self.cfg.get("theme", "dark"), THEMES["dark"])
 
-        self.title(APP_NAME)
+        self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1100x760")
         self.minsize(900, 640)
         self.configure(bg=self.C["bg"])
 
         self.mods_meta         = {}
+        self.team_frame        = None
         self.all_textures      = []
         self.filtered_textures = []
         self.selected_texture  = None
@@ -1250,6 +1333,7 @@ class ModManagerApp(tk.Tk):
         self._build_textures_tab(self.notebook)
         self._build_audio_tab(self.notebook)
         self._build_meshes_tab(self.notebook)
+        self._build_teams_tab(self.notebook)
         self.floor_patterns_tab = self._build_tool_tab(
             self.notebook, "🪵 Floor Patterns", "🪵", "Floor Patterns",
             "Pick a wood-grain pattern for each team's court, throwback eras included.",
@@ -1291,6 +1375,220 @@ class ModManagerApp(tk.Tk):
                      text=f"Meshes tab unavailable:\n{e}\n\nmesh_tab.py, "
                           f"mesh_view.py and mesh_manager.py should sit in the "
                           f"modules folder next to app.py.").pack(anchor="w", padx=20, pady=20)
+
+    # ── Teams tab ─────────────────────────────────────────────────────────────
+    def _build_teams_tab(self, notebook):
+        """Add, rename and recolor teams, including slots the game never shipped.
+
+        Lives in team_tab.py + team_manager.py, which are self-contained: they
+        import nothing from this file and never call apply_single_mod().
+
+        Renames and recolors are in-place, length-preserving patches, so they
+        cannot disturb a queued mod. Adding or removing teams re-serializes
+        sharedassets1.assets and level1, which moves every byte offset in those
+        files -- so the tab is handed reapply_mods_after_rebuild() and calls it
+        whenever a rebuild happened.
+        """
+        tab = ttk.Frame(notebook, style="TFrame")
+        notebook.add(tab, text="🏀 Teams")
+        self.teams_tab = tab
+        try:
+            from team_tab import TeamTab
+            self.team_frame = TeamTab(
+                tab, self.cfg.get("game_data_path", ""), host=self, theme={
+                    "bg":     self.C["bg"],
+                    "panel":  self.C["panel"],
+                    "accent": self.C["accent"],
+                    "text":   self.C["text"],
+                    "muted":  self.C["sub"],
+                    "entry":  self.C["ebg"],
+                    "gold":   self.C["gold"],
+                    "red":    self.C["hi"],
+                },
+                on_rebuilt=self.reapply_mods_after_rebuild)
+            self.team_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.team_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
+                     justify="left",
+                     text=f"Teams tab unavailable:\n{e}\n\nteam_tab.py and "
+                          f"team_manager.py should sit in the modules folder "
+                          f"next to app.py.").pack(anchor="w", padx=20, pady=20)
+
+    def adopt_detached_textures(self, assets_path, texture_ids):
+        """Make copied textures first-class mods so their pixels survive.
+
+        This is what the Teams tab's Detach needs, and why it broke the first
+        time. Every texture in this game is STREAMED: the object holds an
+        offset into sharedassets1.assets.resS, not the pixels. apply_single_mod()
+        rewinds that .resS to its backup once per run and re-appends every mod
+        in mods.json, giving each one a fresh offset.
+
+        A copied texture inherits its source's offset. If the source had itself
+        been modded, that offset pointed into the appended region -- and the
+        next apply run moved the source's data and left the copy pointing at
+        bytes that were no longer there. The game reported exactly that:
+        "async texture load: failed to load ... from sharedassets1.assets.resS".
+
+        Registering each copy in mods.json fixes it at the root: from then on
+        the copy is re-appended and re-offset on every run, like everything
+        else. The PNG written here is the copy's CURRENT appearance, so the
+        team looks unchanged until the user replaces that PNG with their own.
+        """
+        folder = self.cfg.get("mods_folder", "")
+        if not folder:
+            raise RuntimeError("No mods folder configured.")
+        os.makedirs(folder, exist_ok=True)
+        added = 0
+        for pid in texture_ids:
+            key = f"{os.path.basename(assets_path)}__{pid}"
+            if key in self.mods_meta:
+                continue
+            # NOT get_texture_image(): that prefers the .original_backup, and
+            # a copy made moments ago exists only in the live file.
+            img, tex_name = None, f"texture {pid}"
+            env = UnityPy.load(assets_path)
+            try:
+                for obj in env.objects:
+                    if obj.path_id == pid:
+                        d = obj.read()
+                        img = d.image
+                        tex_name = getattr(d, "m_Name", "") or tex_name
+                        break
+            finally:
+                for holder in ("files", "cabs"):
+                    table = getattr(env, holder, None)
+                    if isinstance(table, dict):
+                        table.clear()
+            if img is None:
+                raise RuntimeError(f"Could not read the copied texture {pid} "
+                                   f"back out of {os.path.basename(assets_path)}.")
+            png = os.path.join(
+                folder, f"{os.path.basename(assets_path)}__{pid}__{tex_name}.png")
+            img.save(png)
+            self.mods_meta[key] = {
+                "name": tex_name,
+                "assets_file": assets_path,
+                "path_id": pid,
+                "png_path": png,
+            }
+            added += 1
+        if added:
+            save_mods_meta(folder, self.mods_meta)
+        return added
+
+    def purge_orphaned_mods(self, assets_paths=None):
+        """Drop queued mods whose target object no longer exists.
+
+        Called after anything that can delete objects this app created. Without
+        it, a logo made for a team you removed is silently re-applied to the
+        next team that happens to reuse that path_id -- which is exactly what
+        "the old custom logo keeps coming back on a different team" is.
+        """
+        by_file = {}
+        for key, mod in self.mods_meta.items():
+            by_file.setdefault(mod["assets_file"], []).append((key, mod["path_id"]))
+        removed = []
+        # Teams tab reports paths built with os.path.join (backslashes), while
+        # mods.json stores whatever the config held (often forward slashes).
+        # Compare normalised, or the filter silently matches nothing and every
+        # orphaned CUSTOM_* mod survives the removal.
+        wanted = ({_norm_path(p) for p in assets_paths} if assets_paths else None)
+        for assets_file, entries in by_file.items():
+            if wanted is not None and _norm_path(assets_file) not in wanted:
+                continue
+            alive = mod_targets_exist(assets_file, [pid for _k, pid in entries])
+            for key, pid in entries:
+                if pid not in alive:
+                    removed.append(self.mods_meta.pop(key).get("name", key))
+        if removed and self.cfg.get("mods_folder"):
+            save_mods_meta(self.cfg["mods_folder"], self.mods_meta)
+        return removed
+
+    def reapply_mods_after_rebuild(self):
+        """Re-apply every queued texture and mesh mod, without prompting.
+
+        Called by the Teams tab after a rebuild. Mods are stored per path_id,
+        which survives re-serialization -- it is the raw byte offsets that move
+        -- so replaying them from their saved PNG/mesh sources restores them.
+
+        Returns how many were applied. Raises if any failed, because the caller
+        needs to tell the user rather than quietly leave mods half-applied.
+        """
+        try:
+            return self._reapply_mods_after_rebuild()
+        finally:
+            # The rebuilt files may have lost (or gained) CUSTOM_* textures, so
+            # the Textures list must be re-read -- otherwise removed teams' art
+            # stays listed and can be queued again against objects that are gone.
+            try:
+                self.after(0, self._load_textures_async)
+            except Exception:
+                pass
+
+    def _reapply_mods_after_rebuild(self):
+        # Whatever rebuilt the files, drop mods whose target object is gone
+        # before trying to write them.
+        try:
+            self.purge_orphaned_mods()
+        except Exception:
+            pass
+        applied, errors = 0, []
+        ress_reset = set()
+        for key, mod in self.mods_meta.items():
+            af, png, pid = mod["assets_file"], mod["png_path"], mod["path_id"]
+            if not os.path.exists(af) or not os.path.exists(png):
+                errors.append(f"{mod.get('name', key)}: source file missing")
+                continue
+            if pid >= 91000000 and not mod_targets_exist(af, [pid]):
+                # An app-created object that has since been removed. Skipping is
+                # right -- applying it would hit whatever now owns that path_id.
+                continue
+            ensure_backup(af)
+            try:
+                apply_single_mod(af, pid, png, ress_reset=ress_reset)
+                applied += 1
+                try:
+                    sprite_crop.uncrop_texture_sprites(af, pid)
+                except Exception:
+                    pass          # cosmetic; never worth failing a re-apply over
+            except Exception as e:
+                errors.append(f"{mod.get('name', key)}: {e}")
+        if self.mesh_frame is not None and self._mesh_mod_count():
+            try:
+                m_applied, m_errors, _w = self.mesh_frame.apply_all(
+                    ress_reset=ress_reset, ensure_backup=ensure_backup)
+                applied += m_applied
+                errors += m_errors
+            except Exception as e:
+                errors.append(f"meshes: {e}")
+        # Audio lives in the same rebuilt files: a restored or re-serialized
+        # sharedassets1.assets points its AudioClips back at the stock sample
+        # data, so queued audio replacements have to be written again too.
+        audio_mods = getattr(self.audio_frame, "audio_mods", None) or {}
+        if audio_mods:
+            from audio_manager import apply_audio_replacement, ensure_audio_backup
+            for key, mod in audio_mods.items():
+                af, wav = mod.get("assets_file"), mod.get("audio_path")
+                if not (af and wav and os.path.exists(af) and os.path.exists(wav)):
+                    errors.append(f"{mod.get('name', key)}: source file missing")
+                    continue
+                try:
+                    ensure_audio_backup(af)
+                    apply_audio_replacement(af, mod["path_id"], wav)
+                    applied += 1
+                except Exception as e:
+                    errors.append(f"{mod.get('name', key)}: {e}")
+        if errors:
+            raise RuntimeError("; ".join(errors[:4])
+                               + ("" if len(errors) <= 4
+                                  else f" (+{len(errors) - 4} more)"))
+        return applied
+
+    def save_cfg(self):
+        """Persist self.cfg. For tabs that keep a setting of their own (the
+        Teams tab's HardWoods DLC toggle) without importing this module."""
+        save_config(self.cfg)
 
     # ── Saves tab ─────────────────────────────────────────────────────────────
     def _build_saves_tab(self, notebook):
@@ -1360,6 +1658,8 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.court_colors_tab)),
             ("💾", "Saves", "Unlock mascots, jerseys, logos, balls, and trails.",
              lambda: self._goto_tab(self.saves_tab)),
+            ("🏀", "Teams", "Add custom teams, rename, recolor, and borrow art.",
+             lambda: self._goto_tab(self.teams_tab)),
         ]
         for i, (icon, title, desc, command) in enumerate(card_defs):
             self._build_home_card(cards, icon, title, desc, command).grid(
@@ -1421,6 +1721,8 @@ class ModManagerApp(tk.Tk):
             self.audio_frame.load()
         elif self.mesh_frame is not None and current is getattr(self, "meshes_tab", None):
             self.mesh_frame.load()
+        elif self.team_frame is not None and current is getattr(self, "teams_tab", None):
+            self.team_frame.load(silent=True)
         elif current is getattr(self, "floor_patterns_tab", None):
             self.after(50, self._open_floor_patterns_dialog)
         elif current is getattr(self, "sliders_tab", None):
@@ -1560,6 +1862,14 @@ class ModManagerApp(tk.Tk):
             if getattr(self, "save_frame", None) is not None:
                 try:
                     self.save_frame.set_game_data_path(self.cfg["game_data_path"])
+                except Exception:
+                    pass
+            # Teams tab was handed the game path when it was built, so it is
+            # still holding the old one (an empty string on a fresh install)
+            # until it is told otherwise.
+            if getattr(self, "team_frame", None) is not None:
+                try:
+                    self.team_frame.set_game_path(self.cfg["game_data_path"])
                 except Exception:
                     pass
             # Meshes tab keeps its own list and mesh_mods.json, both of which are
@@ -1897,6 +2207,24 @@ class ModManagerApp(tk.Tk):
         rewind the .resS out from under the other kind's offsets, leaving those
         objects pointing at bytes that are no longer there.
         """
+        # Mods for CUSTOM_* art whose team has since been removed point at
+        # objects that no longer exist; drop them instead of failing on them.
+        created = {m["assets_file"] for m in self.mods_meta.values()
+                   if m.get("path_id", 0) >= 91000000}
+        if created:
+            try:
+                dropped = self.purge_orphaned_mods(created)
+            except Exception:
+                dropped = []
+            if dropped:
+                self._populate_tree(self.all_textures)
+                messagebox.showinfo(
+                    "Removed stale custom-team mods",
+                    "These mods targeted art from custom teams that no longer "
+                    "exist, so they were removed from your mod list:\n\n"
+                    + "\n".join(f"  • {n}" for n in dropped[:12])
+                    + ("" if len(dropped) <= 12
+                       else f"\n  … +{len(dropped) - 12} more"))
         count      = len(self.mods_meta)
         mesh_count = self._mesh_mod_count()
         if not count and not mesh_count:

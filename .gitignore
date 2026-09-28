@@ -41,6 +41,15 @@ app.py.bak_*
 *.assets.resS.original_backup
 *.resource.original_backup
 
+# ── Local dev leftovers (archived PoC scripts, AI session output) ────────────
+_dev_archive/
+Claude outputs/
+
+# ── Game file backups from the Teams tab ─────────────────────────────────────
+*.teamslot_backup
+*.gridscale_backup
+*.navpatch_backup
+
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
