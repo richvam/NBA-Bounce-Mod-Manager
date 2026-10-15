@@ -49,6 +49,7 @@ Claude outputs/
 *.teamslot_backup
 *.gridscale_backup
 *.navpatch_backup
+*.sliders_backup
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/

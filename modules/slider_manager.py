@@ -89,10 +89,23 @@ ET = {0x01: "void", 0x02: "bool", 0x03: "char", 0x04: "sbyte", 0x05: "byte",
       0x18: "IntPtr", 0x19: "UIntPtr", 0x1C: "object"}
 
 # Files and classes we care about
-TARGETS = {
-    "level2": ("AIDifficulty", "AIDifficultyManager", "PlayerStats"),
-    "sharedassets2.assets": ("AIDifficultyProbabilityBars", "ShootBarSystem"),
-}
+# Which file holds which classes. Before the 2026-27 season update the AI
+# difficulty scene was level2 and the bars lived in sharedassets2.assets; since
+# then they are level1 and sharedassets1.assets. game_layout.configure() sets
+# the two names for the installed build through apply_layout().
+SCENE_FILE  = "level2"
+SHARED_FILE = "sharedassets2.assets"
+SCENE_CLASSES  = ("AIDifficulty", "AIDifficultyManager", "PlayerStats")
+SHARED_CLASSES = ("AIDifficultyProbabilityBars", "ShootBarSystem")
+TARGETS = {SCENE_FILE: SCENE_CLASSES, SHARED_FILE: SHARED_CLASSES}
+
+
+def apply_layout(layout):
+    """Point the slider editor at this build's scene and shared file."""
+    global SCENE_FILE, SHARED_FILE, TARGETS
+    SCENE_FILE = layout.get("slider_scene", SCENE_FILE)
+    SHARED_FILE = layout.get("slider_shared", SHARED_FILE)
+    TARGETS = {SCENE_FILE: SCENE_CLASSES, SHARED_FILE: SHARED_CLASSES}
 BASE_SHOOT_BAR_NAME = "BaseBounceShootingBar"
 
 
@@ -241,7 +254,21 @@ class Assembly:
         self._sf[ti] = out
         return out
 
+    # UnityEngine classes referenced from another assembly can't be resolved
+    # here, but they all serialize as a 12-byte PPtr. Needed for e.g. the
+    # GOAT unlockables (Sprite / GameObject fields) read by save_manager.
+    UNITY_OBJECT_TYPES = {
+        "UnityEngine." + n for n in (
+            "Object", "GameObject", "Component", "Transform", "RectTransform",
+            "Behaviour", "MonoBehaviour", "ScriptableObject", "Sprite", "Texture",
+            "Texture2D", "RenderTexture", "Material", "Mesh", "AudioClip", "Shader",
+            "Font", "TextAsset", "AnimationClip", "RuntimeAnimatorController",
+            "Animator", "Camera", "Light", "Renderer", "MeshRenderer",
+            "SpriteRenderer", "ParticleSystem", "Collider", "Rigidbody")}
+
     def is_unity_object(self, tn: str) -> bool:
+        if tn in self.UNITY_OBJECT_TYPES:
+            return True
         ti = self.resolve(tn)
         for _ in range(20):
             if ti is None:
@@ -444,14 +471,14 @@ class SliderManager:
     def _map_roles(self):
         """Resolve semantic roles -> objects, never hardcoding path_ids."""
         self.roles = {}
-        mgr = [o for o in self.objs["level2"] if o.cls == "AIDifficultyManager"]
+        mgr = [o for o in self.objs[SCENE_FILE] if o.cls == "AIDifficultyManager"]
         if not mgr:
-            raise RuntimeError("AIDifficultyManager not found in level2")
+            raise RuntimeError(f"AIDifficultyManager not found in {SCENE_FILE}")
         m = mgr[0].data
         tiers = [p["PPtr"][1] for p in m["m_aoDifficultyTiers"]]
         human = m["m_oHumanDifficulty"]["PPtr"][1]
         scratch = m["m_oCurrentAIDifficulty"]["PPtr"][1]
-        by_id = {o.path_id: o for o in self.objs["level2"]}
+        by_id = {o.path_id: o for o in self.objs[SCENE_FILE]}
         for i, pid in enumerate(tiers):
             self.roles["tier%d" % i] = by_id[pid]
         self.roles["human"] = by_id[human]
@@ -459,15 +486,15 @@ class SliderManager:
         self._scratch_bars = by_id[scratch].data.get(
             "m_oAIDifficultyProbabilityBars", {}).get("PPtr", [0, 0])[1]
         # each tier's probability-bars asset
-        sa2 = {o.path_id: o for o in self.objs["sharedassets2.assets"]}
+        sa2 = {o.path_id: o for o in self.objs[SHARED_FILE]}
         for i, pid in enumerate(tiers):
             b = by_id[pid].data.get("m_oAIDifficultyProbabilityBars", {}).get("PPtr", [0, 0])[1]
             if b in sa2:
                 self.roles["bars%d" % i] = sa2[b]
-        for o in self.objs["sharedassets2.assets"]:
+        for o in self.objs[SHARED_FILE]:
             if o.cls == "ShootBarSystem" and o.name == BASE_SHOOT_BAR_NAME:
                 self.roles["shootbar"] = o
-        self.roles["playerstats"] = [o for o in self.objs["level2"] if o.cls == "PlayerStats"]
+        self.roles["playerstats"] = [o for o in self.objs[SCENE_FILE] if o.cls == "PlayerStats"]
 
     @property
     def tier_count(self):
@@ -633,7 +660,7 @@ class SliderManager:
 
     def _stock_shootbar(self):
         if not hasattr(self, "_stock_sb"):
-            objs = self._read_file("sharedassets2.assets", use_backup=True)
+            objs = self._read_file(SHARED_FILE, use_backup=True)
             self._stock_sb = next(o.data for o in objs
                                   if o.cls == "ShootBarSystem" and o.name == BASE_SHOOT_BAR_NAME)
         return self._stock_sb
@@ -691,13 +718,49 @@ class SliderManager:
         return rep
 
     def revert(self):
+        """Put every slider field back to the value in its backup.
+
+        Field by field rather than copying the backup over the file. Since the
+        2026-27 season update the AI-difficulty scene is level1, which also
+        holds the team list, so a whole-file copy would silently undo team
+        changes (added teams, order) made after the slider backup was taken.
+        Only float / Vector2 fields of the slider objects are written -- the
+        only kinds commit() ever changes -- and each is matched by object
+        path_id and field path, so moved byte offsets don't matter.
+        """
         done = []
         for fname in TARGETS:
             path = os.path.join(self.root, fname)
             bak = path + BACKUP_SUFFIX
-            if os.path.exists(bak):
-                shutil.copy2(bak, path); done.append(fname)
-        if done:
+            if not os.path.exists(bak):
+                continue
+            current = self._read_file(fname)
+            stock = {o.path_id: o for o in self._read_file(fname, use_backup=True)}
+            writes = []
+            with open(bak, "rb") as fb:
+                for o in current:
+                    b = stock.get(o.path_id)
+                    if b is None or b.cls != o.cls:
+                        continue
+                    for spath, slot in o.slots.items():
+                        if slot.type not in ("float", "UnityEngine.Vector2"):
+                            continue
+                        bs = b.slots.get(spath)
+                        if bs is None or bs.size != slot.size or bs.type != slot.type:
+                            continue
+                        fb.seek(b.byte_start + bs.rel)
+                        writes.append((o.byte_start + slot.rel, fb.read(bs.size)))
+            changed = 0
+            with open(path, "r+b") as fh:
+                for off, blob in writes:
+                    fh.seek(off)
+                    if fh.read(len(blob)) != blob:
+                        fh.seek(off)
+                        fh.write(blob)
+                        changed += 1
+            if changed:
+                done.append(fname)
+        if self._loaded:
             self.load()
         return done
 
@@ -716,3 +779,12 @@ class SliderManager:
         d = json.load(open(path, encoding="utf-8"))
         self.values = dict(d.get("sliders", {}))
         return d.get("label", "custom")
+
+
+# Pick up the file layout game_layout.configure() resolved for this game build
+# (this module may be imported after that ran -- see game_layout.attach()).
+try:
+    import game_layout as _game_layout
+    _game_layout.attach(__import__("sys").modules[__name__])
+except Exception:
+    pass

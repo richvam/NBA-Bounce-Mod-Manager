@@ -19,7 +19,8 @@ Falls back to the app's dark "Arena Night" palette.
 
 HOW IT WORKS
 ------------
-Every court has two materials in sharedassets1.assets --
+Every court has two materials in the court file (sharedassets1.assets before the
+2026-27 season update, sharedassets0.assets since) --
 mat_bounce_stadium_parquet_{Team} and mat_bounce_stadium_lines_{Team} -- and both
 carry a `_Texture_Parquet` texture slot holding a 12-byte PPtr
 (int32 fileID + int64 pathID). Out of the box all 38 NBA courts point at the same
@@ -29,11 +30,22 @@ already point at their own, which is what proves the mechanism is supported.
 Redirecting a court's PPtr to a different texture is size-neutral, so it patches
 in place exactly like the Court Colors work.
 
-The catch is that new Texture2D objects cannot be created. Instead we reuse eight
-dead textures shipped by accident in resources.assets -- documentation screenshots
-from a localization asset-store plugin. Each is 512x512 plain DXT1 with a
-174,776-byte slot, which is exactly a complete 512x512 DXT1 mip chain, so a
-pattern drops in with zero size delta.
+Where the pattern pixels live depends on the build:
+
+  * Pre-update builds ("donor" mode): eight dead textures shipped by accident in
+    resources.assets -- documentation screenshots from a localization
+    asset-store plugin. Each is 512x512 plain DXT1 with a 174,776-byte slot,
+    exactly a complete 512x512 DXT1 mip chain, so a pattern is written straight
+    over it in place (with a revert journal).
+
+  * 2026-27 build onward ("slot" mode): the court file no longer links to
+    resources.assets, so those donors are out of reach. On first apply the app
+    adds eight FLOORSLOT_n textures to the court file in one verified rebuild
+    (copies of the stock floor's object, re-described as plain DXT1 + 10 mips).
+    A pattern's mip chain is appended to the court file's .resS and the slot is
+    pointed at it -- the same streaming trick apply_single_mod() uses -- and
+    every Apply Mods run writes them again (reapply_slot_pixels), because that
+    run rewinds the .resS. Revert points the courts back at the stock floor.
 
 That gives 8 simultaneous custom patterns plus the untouched stock floor. The
 pattern LIBRARY is unlimited; the 8 is how many can be live at once, and slots are
@@ -78,12 +90,30 @@ CUSTOM_DIR = os.path.join(CACHE_DIR, "custom")
 STATE_FILE = app_paths.user("floor_patterns.json")
 JOURNAL_FILE = app_paths.user("floor_patterns_journal.json")
 
-MAT_FILE = "sharedassets1.assets"
+MAT_FILE = "sharedassets1.assets"   # court materials; sharedassets0 since the 2026-27 update
 DONOR_FILE = "resources.assets"
+
+
+def apply_layout(layout):
+    """Point at the file holding the court materials on this game build."""
+    global MAT_FILE
+    MAT_FILE = layout.get("court_file", MAT_FILE)
 SLOT_KEY = b"_Texture_Parquet"
-STOCK_PATHID = 1760                 # txt_bounce_parquet01_D, fileID 0
+STOCK_PATHID = 1760                 # txt_bounce_parquet01_D on the pre-update build; looked up by name
 S = 512
 EXPECTED_SLOT_BYTES = 174776        # 512x512 DXT1, 10 mips
+
+# Slot mode (2026-27 season update onward): the court materials' file has no
+# link to resources.assets any more, so the donor textures below can't be
+# pointed at. Instead the app adds its own SLOT_COUNT textures to that file --
+# plain 512x512 DXT1 with a full 10-level mip chain, cloned from the stock
+# floor's object -- in one verified rebuild, the same way the Teams tab copies
+# art. Their pixels live at the end of the file's .resS and are re-appended on
+# every Apply Mods run (see reapply_slot_pixels), exactly like texture mods.
+SLOT_PREFIX = "FLOORSLOT_"
+SLOT_COUNT = 8
+FIRST_SLOT_PATH_ID = 92000001
+ORIGINAL_BACKUP = ".original_backup"     # app.py's BACKUP_SUFFIX
 
 # Verified unreferenced 512x512 DXT1 leftovers in resources.assets.
 DONORS = ["add_new_view", "api_quick_start", "langScreenshotColId", "lang_deleteLang",
@@ -270,10 +300,11 @@ def extract_stock_pattern(game_path, force=False):
     be mistaken for the original. Matches on path_id first and falls back to the
     texture name, in case a game patch renumbers objects.
     """
-    if not force and os.path.exists(STOCK_CACHE):
+    stamp = _stock_stamp(game_path)
+    if not force and os.path.exists(STOCK_CACHE) and _read_stock_meta() == stamp:
         return True
     if not game_path or not os.path.isdir(game_path):
-        return False
+        return os.path.exists(STOCK_CACHE)
 
     src = os.path.join(game_path, MAT_FILE)
     bak = src + ".original_backup"
@@ -285,16 +316,51 @@ def extract_stock_pattern(game_path, force=False):
     try:
         env = UnityPy.load(src)
         textures = [o for o in env.objects if getattr(o.type, "name", "") == "Texture2D"]
-        by_path_id = [o for o in textures if int(o.path_id) == STOCK_PATHID]
+        # Name first: path_ids change between game builds (1760 was the stock
+        # floor before the 2026-27 update and is a team logo after it).
         by_name = [o for o in textures if o.peek_name() == STOCK_TEXTURE_NAME]
-        for o in by_path_id + by_name:
+        by_path_id = [] if by_name else [o for o in textures
+                                         if int(o.path_id) == STOCK_PATHID]
+        for o in by_name + by_path_id:
             img = o.read().image
             if img is not None:
                 _save_stock(img)
+                _write_stock_meta(stamp)
                 return True
     except Exception:
         pass                # non-fatal: the library just won't offer the entry
     return False
+
+
+STOCK_META = os.path.join(CACHE_DIR, "stock_parquet.json")
+
+
+def _stock_stamp(game_path):
+    """Which game build and file the cached stock floor came from. A cache from
+    another build (or the wrong texture, as pre-3.2 builds could produce after
+    the 2026-27 update) is re-extracted."""
+    try:
+        import game_layout
+        build = game_layout.build_id(game_path) if game_path else ""
+    except Exception:
+        build = ""
+    return {"build": build, "file": MAT_FILE, "name": STOCK_TEXTURE_NAME, "v": 2}
+
+
+def _read_stock_meta():
+    try:
+        with open(STOCK_META, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _write_stock_meta(stamp):
+    try:
+        with open(STOCK_META, "w", encoding="utf-8") as f:
+            json.dump(stamp, f)
+    except OSError:
+        pass
 
 
 def _save_stock(img):
@@ -307,7 +373,9 @@ def _save_stock(img):
 
 def stock_available(game_path=None):
     """True if the stock floor can be shown -- cached already, or extractable."""
-    return os.path.exists(STOCK_CACHE) or extract_stock_pattern(game_path)
+    if game_path:
+        return extract_stock_pattern(game_path)   # cheap when the cache is current
+    return os.path.exists(STOCK_CACHE)
 
 
 def library(game_path=None):
@@ -468,7 +536,11 @@ class FloorPatternManager:
         self.game_path = game_path
         self.courts = {}     # team -> {"materials":[(name,pptr_offset)], "tint":(r,g,b)}
         self.donors = {}     # donor name -> {path_id,offset,size,res}
-        self.file_id = None  # fileID that reaches resources.assets from sharedassets1
+        self.file_id = None  # fileID that reaches resources.assets from MAT_FILE
+        self.stock_pid = None  # txt_bounce_parquet01_D in MAT_FILE
+        self.mode = None       # "donors" (pre-update builds) or "slots"
+        self.slots = {}        # slot texture name -> path_id (slot mode)
+        self.last_rebuilt = False
         self.loaded = False
 
     # -- discovery ---------------------------------------------------------
@@ -478,9 +550,10 @@ class FloorPatternManager:
         for p in (mat_path, don_path):
             if not os.path.exists(p):
                 raise FileNotFoundError(p)
+        self.courts, self.donors, self.slots = {}, {}, {}
 
         if progress:
-            progress("Reading sharedassets1.assets ...")
+            progress(f"Reading {MAT_FILE} ...")
         raw = open(mat_path, "rb").read()
         env = UnityPy.load(mat_path)
 
@@ -517,9 +590,35 @@ class FloorPatternManager:
                              for e in (getattr(o.assets_file, "externals", []) or [])]
 
         if externals and DONOR_FILE in externals:
+            self.mode = "donors"
             self.file_id = externals.index(DONOR_FILE) + 1
         else:
-            raise RuntimeError(f"{DONOR_FILE} not reachable from {MAT_FILE}")
+            # Since the 2026-27 season update the court materials live in a file
+            # with no link to resources.assets: use the app's own slot textures.
+            self.mode = "slots"
+            self.file_id = 0
+
+        # The stock floor texture's path_id changes between game builds; find
+        # it by name in the materials' own file (fileID 0).
+        self.stock_pid = None
+        for o in env.objects:
+            if getattr(o.type, "name", "") == "Texture2D":
+                try:
+                    if o.peek_name() == STOCK_TEXTURE_NAME:
+                        self.stock_pid = int(o.path_id)
+                        break
+                except Exception:
+                    continue
+        if self.stock_pid is None:
+            raise RuntimeError(f"Could not find {STOCK_TEXTURE_NAME} in {MAT_FILE}.")
+
+        if self.mode == "slots":
+            self.slots = _slot_ids(env)
+            self._extract_stock(env, progress)
+            self.loaded = True
+            if progress:
+                progress(f"{len(self.courts)} courts, {SLOT_COUNT} slots")
+            return self
 
         if progress:
             progress("Reading resources.assets ...")
@@ -549,7 +648,7 @@ class FloorPatternManager:
     def _extract_stock(self, env=None, progress=None):
         """Cache the shipped floor texture as a PNG, so it can be previewed and
         exported as an editing template. See extract_stock_pattern()."""
-        if os.path.exists(STOCK_CACHE):
+        if os.path.exists(STOCK_CACHE) and _read_stock_meta() == _stock_stamp(self.game_path):
             return
         if progress:
             progress("Extracting the stock floor texture ...")
@@ -557,7 +656,7 @@ class FloorPatternManager:
 
     @property
     def max_slots(self):
-        return len(self.donors)
+        return SLOT_COUNT if self.mode == "slots" else len(self.donors)
 
     # -- apply -------------------------------------------------------------
     def apply(self, assignments, progress=None):
@@ -566,6 +665,8 @@ class FloorPatternManager:
         The stock-floor key is equivalent to None -- it points the court back at
         the shipped texture, so it consumes no donor slot."""
         assignments = {t: (None if k == STOCK_KEY else k) for t, k in assignments.items()}
+        if self.mode == "slots":
+            return self._apply_slots(assignments, progress)
         used = []
         for t, key in assignments.items():
             if key and key not in used:
@@ -594,7 +695,7 @@ class FloorPatternManager:
             if key:
                 pptr = struct.pack("<iq", self.file_id, self.donors[slot_map[key]]["path_id"])
             else:
-                pptr = struct.pack("<iq", 0, STOCK_PATHID)
+                pptr = struct.pack("<iq", 0, self.stock_pid)
             for _name, off in self.courts[team]["materials"]:
                 j.write(mat_path, off, pptr)
             n += 1
@@ -604,11 +705,247 @@ class FloorPatternManager:
         return n, slot_map
 
     def revert(self):
+        if self.mode == "slots":
+            return self._revert_slots()
         return Journal().revert(self.game_path)
+
+    # -- slot mode ---------------------------------------------------------
+    def _apply_slots(self, assignments, progress=None):
+        used = []
+        for key in assignments.values():
+            if key and key not in used:
+                used.append(key)
+        if len(used) > SLOT_COUNT:
+            raise RuntimeError(f"{len(used)} patterns assigned but only "
+                               f"{SLOT_COUNT} slots exist. Free one first.")
+        mat_path = os.path.join(self.game_path, MAT_FILE)
+        self.last_rebuilt = False
+        if used and len(self.slots) < SLOT_COUNT:
+            # Pristine backups first, so Restore Game Files still means "as
+            # shipped" and the .resS can be rewound by the Apply Mods pipeline.
+            _ensure_original_backup(mat_path)
+            if progress:
+                progress(f"Adding {SLOT_COUNT} pattern slots to {MAT_FILE} ...")
+            create_slots(self.game_path, progress=progress)
+            self.last_rebuilt = True
+            self.discover(progress)          # every byte offset moved
+        names = sorted(self.slots, key=_slot_number)
+        slot_map = dict(zip(used, names[:len(used)]))
+
+        if slot_map:
+            _ensure_original_backup(mat_path)
+        for key, slot in slot_map.items():
+            if progress:
+                progress(f"Encoding {key} -> {slot} ...")
+            _write_slot_pixels(mat_path, self.slots[slot],
+                               encode_dxt1_mipchain(pattern_image(key, self.game_path)),
+                               ress_reset=None)
+
+        n = self._point_courts({t: (self.slots[slot_map[k]] if k else None)
+                                for t, k in assignments.items()})
+        state = load_state()
+        state["slot_patterns"] = {slot: key for key, slot in slot_map.items()}
+        state["slot_file"] = MAT_FILE
+        save_state(state)
+        if progress:
+            progress(f"Applied to {n} courts using {len(slot_map)} slots.")
+        return n, slot_map
+
+    def _point_courts(self, targets):
+        """targets: {team: texture path_id or None for stock}. In place: each
+        _Texture_Parquet PPtr is 12 bytes at a fixed spot in its material."""
+        mat_path = os.path.join(self.game_path, MAT_FILE)
+        n = 0
+        with open(mat_path, "r+b") as f:
+            for team, pid in targets.items():
+                if team not in self.courts:
+                    continue
+                pptr = struct.pack("<iq", 0, pid if pid else self.stock_pid)
+                for _name, off in self.courts[team]["materials"]:
+                    f.seek(off)
+                    f.write(pptr)
+                n += 1
+        return n
+
+    def _revert_slots(self):
+        n = self._point_courts({t: None for t in self.courts})
+        state = load_state()
+        state["slot_patterns"] = {}
+        save_state(state)
+        return n
 
     @staticmethod
     def journal_active():
         return Journal().active
+
+
+# ===========================================================================
+# Slot textures (2026-27 build onward)
+# ===========================================================================
+def _slot_number(name):
+    try:
+        return int(name[len(SLOT_PREFIX):])
+    except ValueError:
+        return 0
+
+
+def _slot_ids(env):
+    """{slot name: path_id} for the app's slot textures in a loaded file."""
+    out = {}
+    for o in env.objects:
+        if getattr(o.type, "name", "") != "Texture2D":
+            continue
+        try:
+            name = o.peek_name()
+        except Exception:
+            continue
+        if name.startswith(SLOT_PREFIX):
+            out[name] = int(o.path_id)
+    return out
+
+
+def _ensure_original_backup(assets_path):
+    """Same rule as app.ensure_backup(): copy the file and its .resS/.resource
+    companions to .original_backup once, never overwriting."""
+    for p in [assets_path] + [assets_path + c for c in (".resS", ".resource")]:
+        if os.path.exists(p) and not os.path.exists(p + ORIGINAL_BACKUP):
+            shutil.copy2(p, p + ORIGINAL_BACKUP)
+
+
+def create_slots(game_path, count=SLOT_COUNT, progress=None):
+    """Add `count` slot textures to the court materials' file in one verified
+    rebuild. Each is a copy of the stock floor's Texture2D re-described as plain
+    512x512 DXT1 with a 10-level mip chain (174,776 bytes). Until a pattern is
+    written into it a slot is unreferenced, so its stream pointer doesn't matter.
+    Returns the new {name: path_id}."""
+    import copy
+    import team_manager as tm
+    from UnityPy.helpers.TypeTreeHelper import write_typetree
+    from UnityPy.streams.EndianBinaryWriter import EndianBinaryWriter
+
+    mat_path = os.path.join(game_path, MAT_FILE)
+    added = {}
+
+    def edit(env):
+        have = _slot_ids(env)
+        stock = next((o for o in env.objects
+                      if getattr(o.type, "name", "") == "Texture2D"
+                      and o.peek_name() == STOCK_TEXTURE_NAME), None)
+        if stock is None:
+            raise RuntimeError(f"{STOCK_TEXTURE_NAME} not found in {MAT_FILE}.")
+        d = stock.read_typetree()
+        node = stock._get_typetree_node()
+        taken = set(env.file.objects)
+        pid = FIRST_SLOT_PATH_ID
+        for n in range(1, count + 1):
+            name = f"{SLOT_PREFIX}{n}"
+            if name in have:
+                continue
+            while pid in taken:
+                pid += 1
+            d2 = copy.deepcopy(d)
+            d2["m_Name"] = name
+            d2["m_TextureFormat"] = int(TextureFormat.DXT1)
+            d2["m_CompleteImageSize"] = EXPECTED_SLOT_BYTES
+            d2["m_MipCount"] = 10
+            d2["m_StreamData"]["size"] = EXPECTED_SLOT_BYTES
+            w = EndianBinaryWriter(endian=stock.reader.endian)
+            write_typetree(d2, node, w, env.file)
+            tm._add_object(env, stock.path_id, pid, w.bytes)
+            added[name] = pid
+            taken.add(pid)
+        return set()
+
+    # Count first so the rebuild can verify exactly that many objects appear.
+    env = UnityPy.load(mat_path)
+    try:
+        missing = count - len([k for k in _slot_ids(env) if _slot_number(k) <= count])
+    finally:
+        tm.close_env(env)
+    if missing <= 0:
+        return {}
+    tm._rebuild(mat_path, edit, expect_added=missing, progress=progress)
+    return added
+
+
+def _write_slot_pixels(assets_path, path_id, data, ress_reset=None):
+    """Append a slot's mip chain to the .resS and point the slot at it.
+
+    ress_reset follows apply_single_mod()'s rule: a .resS is rewound to its
+    backup the first time a run touches it, never again in the same run. None
+    means a standalone apply from the Floor Patterns window -- then nothing is
+    rewound (that would drop every texture mod's bytes) and we just append.
+    """
+    from UnityPy.helpers.TypeTreeHelper import write_typetree
+    from UnityPy.streams.EndianBinaryWriter import EndianBinaryWriter
+    if len(data) != EXPECTED_SLOT_BYTES:
+        raise RuntimeError(f"encoded {len(data)} bytes, slot is {EXPECTED_SLOT_BYTES}")
+    env = UnityPy.load(assets_path)
+    try:
+        obj = next((o for o in env.objects if o.path_id == path_id), None)
+        if obj is None:
+            raise RuntimeError(f"Pattern slot {path_id} is missing from {MAT_FILE}.")
+        d = obj.read_typetree()
+        node = obj._get_typetree_node()
+        endian = obj.reader.endian
+        start, size = obj.byte_start, obj.byte_size
+        import ntpath
+        ress = os.path.join(os.path.dirname(assets_path),
+                            ntpath.basename(str(d["m_StreamData"]["path"])))
+        if ress_reset is not None:
+            key = os.path.abspath(ress)
+            if key not in ress_reset:
+                if os.path.exists(ress + ORIGINAL_BACKUP):
+                    shutil.copy2(ress + ORIGINAL_BACKUP, ress)
+                ress_reset.add(key)
+        offset = os.path.getsize(ress)
+        with open(ress, "ab") as f:
+            f.write(data)
+        d["m_StreamData"]["offset"] = offset
+        d["m_StreamData"]["size"] = len(data)
+        w = EndianBinaryWriter(endian=endian)
+        write_typetree(d, node, w, env.file)
+        blob = w.bytes
+    finally:
+        import team_manager as tm
+        tm.close_env(env)
+    if len(blob) != size:
+        raise RuntimeError("slot object changed size; refusing to patch")
+    with open(assets_path, "r+b") as f:
+        f.seek(start)
+        f.write(blob)
+
+
+def reapply_slot_pixels(game_path, ress_reset):
+    """Re-append every assigned slot's pixels during an Apply Mods run.
+
+    Called by app.py after the texture mods, with the run's shared ress_reset,
+    because the run rewinds the .resS to its backup and the slots' bytes go
+    with it. Returns (slots written, [warnings])."""
+    state = load_state()
+    slots = state.get("slot_patterns") or {}
+    if not slots:
+        return 0, []
+    mat_path = os.path.join(game_path, MAT_FILE)
+    env = UnityPy.load(mat_path)
+    try:
+        ids = _slot_ids(env)
+    finally:
+        import team_manager as tm
+        tm.close_env(env)
+    written, notes = 0, []
+    for slot, key in sorted(slots.items()):
+        if slot not in ids:
+            notes.append("Floor patterns were undone by a restore or team reset. "
+                         "Open Floor Patterns and click Apply to put them back.")
+            break
+        try:
+            data = encode_dxt1_mipchain(pattern_image(key, game_path))
+            _write_slot_pixels(mat_path, ids[slot], data, ress_reset=ress_reset)
+            written += 1
+        except Exception as e:
+            notes.append(f"Floor pattern '{key}': {e}")
+    return written, notes
 
 
 # ===========================================================================
@@ -875,7 +1212,9 @@ if HAVE_TK:
                                values=(self._label_for(self.assignments.get(t)),))
           self._build_gallery()
           self._refresh_slots()
-          j = " -- patterns currently applied" if FloorPatternManager.journal_active() else ""
+          live = (load_state().get("slot_patterns") if self.mgr.mode == "slots"
+                  else FloorPatternManager.journal_active())
+          j = " -- patterns currently applied" if live else ""
           self._status(f"{len(self.mgr.courts)} courts found. "
                        f"{self.mgr.max_slots} pattern slots available "
                        f"({self.mgr.max_slots} distinct patterns can be live at once){j}")
@@ -1050,8 +1389,10 @@ if HAVE_TK:
                     f"A slot holds one distinct pattern — courts sharing a pattern share its "
                     f"slot, and courts on the stock floor use none, so all {courts} courts can "
                     f"be reskinned with {cap} or fewer patterns. "
-                    f"{cap} is the hard cap: it's how many spare textures the game ships that "
-                    f"are the right size to overwrite."))
+                    + (f"{cap} is the cap: the app adds {cap} pattern textures to the game "
+                       f"the first time you apply." if self.mgr.mode == "slots" else
+                       f"{cap} is the hard cap: it's how many spare textures the game ships "
+                       f"that are the right size to overwrite.")))
 
       def _assign(self):
           if not (self.sel_team and self.sel_pattern):
@@ -1149,6 +1490,9 @@ if HAVE_TK:
               try:
                   n, _slots = self.mgr.apply(self.assignments,
                                              progress=lambda m: self.after(0, self._status, m))
+                  # apply() records the slot -> pattern map in the state file;
+                  # re-read it so saving the assignments doesn't drop that.
+                  self.state = load_state()
                   self.state["assignments"] = dict(self.assignments)
                   save_state(self.state)
                   self.after(0, lambda: messagebox.showinfo(
@@ -1167,6 +1511,7 @@ if HAVE_TK:
                                      "mods are untouched.", parent=self):
               return
           n = self.mgr.revert()
+          self.state = load_state()
           self.assignments = {}
           for t in self.mgr.courts:
               if self.tree.exists(t):
@@ -1182,6 +1527,15 @@ def open_floor_patterns(parent, game_path, theme=None):
     if not HAVE_TK:
         raise RuntimeError("tkinter is not available in this Python install")
     return FloorPatternWindow(parent, game_path, theme=theme)
+
+
+# Pick up the file layout game_layout.configure() resolved for this game build
+# (this module may be imported after that ran -- see game_layout.attach()).
+try:
+    import game_layout as _game_layout
+    _game_layout.attach(__import__("sys").modules[__name__])
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

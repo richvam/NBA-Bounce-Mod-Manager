@@ -494,46 +494,63 @@ def apply_audio_replacement(assets_path, path_id, replacement_wav):
 
 # ── Playback engine (pygame.mixer) ─────────────────────────────────────────────
 class _Player:
-    """One-clip-at-a-time play / pause(resume) / stop wrapper around pygame."""
+    """One-clip-at-a-time play / pause(resume) / stop.
+
+    Uses pygame when it is installed, otherwise Windows' built-in winsound.
+
+    Nothing is installed here. This used to run `pip install pygame` from the
+    constructor whenever pygame wasn't importable -- i.e. while the main window
+    was being built, on every launch. On Python versions pygame ships no wheel
+    for (3.14 at the time of writing) that pip run tries to compile pygame from
+    source and fails after ~30 s, so the app took half a minute to open and
+    still had no pygame. winsound (stdlib, Windows only) plays the same WAV
+    files; its one limitation is that pause stops the clip instead.
+    """
 
     def __init__(self):
-        self._ok = _ensure_pygame()
+        import importlib.util
+        self._has_pygame = importlib.util.find_spec("pygame") is not None
+        self._has_winsound = (os.name == "nt"
+                              and importlib.util.find_spec("winsound") is not None)
+        self._ok = self._has_pygame or self._has_winsound
+        self.backend = ("pygame" if self._has_pygame
+                        else "winsound" if self._has_winsound else None)
         self._inited = False
         self._paused = False
         self._tmpdir = tempfile.mkdtemp(prefix="nbaudio_")
         self._cur = None
         self._counter = 0
+        self._ws_until = 0.0          # winsound: when the current clip ends
 
     @property
     def available(self):
         return self._ok
 
+    @property
+    def can_pause(self):
+        return self.backend == "pygame"
+
     def _init_mixer(self):
         if self._inited:
+            return True
+        if self.backend == "winsound":
+            self._inited = True
             return True
         try:
             import pygame
             pygame.mixer.init()
             self._inited = True
         except Exception:
-            self._inited = False
+            # pygame present but no usable audio device: try winsound instead.
+            if self._has_winsound:
+                self.backend = "winsound"
+                self._inited = True
+            else:
+                self._inited = False
         return self._inited
 
-    def play_bytes(self, filename, data):
-        if not self._ok or not self._init_mixer():
-            raise RuntimeError("Audio device not available (pygame mixer failed to init).")
-        import pygame
+    def _write_temp(self, filename, data):
         ext = os.path.splitext(filename)[1] or ".wav"
-        # Release the previous clip: stop AND unload, or Windows keeps the temp
-        # file locked and the next write fails with 'Permission denied'.
-        try:
-            pygame.mixer.music.stop()
-        except Exception:
-            pass
-        try:
-            pygame.mixer.music.unload()          # pygame >= 2.0 — frees the file handle
-        except Exception:
-            pass
         # Write each clip to a fresh unique path so we never touch a locked file.
         self._counter += 1
         path = os.path.join(self._tmpdir, f"clip_{self._counter}{ext}")
@@ -546,6 +563,36 @@ class _Player:
             except Exception:
                 pass
         self._cur = path
+        return path
+
+    def play_bytes(self, filename, data):
+        if not self._ok or not self._init_mixer():
+            raise RuntimeError("Audio device not available (pygame mixer failed to init).")
+        if self.backend == "winsound":
+            import winsound, time
+            winsound.PlaySound(None, 0)                     # stop the previous clip
+            path = self._write_temp(filename, data)
+            try:
+                with wave.open(path, "rb") as w:
+                    secs = w.getnframes() / float(w.getframerate() or 1)
+            except Exception:
+                raise RuntimeError("Without pygame, only WAV clips can be played.")
+            winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+            self._ws_until = time.time() + secs
+            self._paused = False
+            return
+        import pygame
+        # Release the previous clip: stop AND unload, or Windows keeps the temp
+        # file locked and the next write fails with 'Permission denied'.
+        try:
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
+        try:
+            pygame.mixer.music.unload()          # pygame >= 2.0 — frees the file handle
+        except Exception:
+            pass
+        path = self._write_temp(filename, data)
         pygame.mixer.music.load(path)
         pygame.mixer.music.play()
         self._paused = False
@@ -553,13 +600,16 @@ class _Player:
     def pause(self):
         if not self._inited:
             return
+        if self.backend == "winsound":
+            self.stop()                 # winsound can't pause; stopping is honest
+            return
         import pygame
         if pygame.mixer.music.get_busy() and not self._paused:
             pygame.mixer.music.pause()
             self._paused = True
 
     def resume(self):
-        if not self._inited:
+        if not self._inited or self.backend == "winsound":
             return
         import pygame
         if self._paused:
@@ -568,6 +618,15 @@ class _Player:
 
     def stop(self):
         if not self._inited:
+            return
+        if self.backend == "winsound":
+            try:
+                import winsound
+                winsound.PlaySound(None, 0)
+            except Exception:
+                pass
+            self._ws_until = 0.0
+            self._paused = False
             return
         import pygame
         try:
@@ -579,6 +638,9 @@ class _Player:
     def is_playing(self):
         if not self._inited:
             return False
+        if self.backend == "winsound":
+            import time
+            return time.time() < self._ws_until
         import pygame
         return bool(pygame.mixer.music.get_busy()) and not self._paused
 
@@ -590,11 +652,12 @@ class _Player:
             self.stop()
         except Exception:
             pass
-        try:
-            import pygame
-            pygame.mixer.quit()
-        except Exception:
-            pass
+        if self.backend == "pygame":
+            try:
+                import pygame
+                pygame.mixer.quit()
+            except Exception:
+                pass
         try:
             shutil.rmtree(self._tmpdir, ignore_errors=True)
         except Exception:
@@ -873,7 +936,9 @@ class AudioManagerFrame(ttk.Frame):
         nmod = len(self.audio_mods)
         extra = f"  ·  {nmod} replacement(s) queued" if nmod else ""
         if not self.player.available:
-            extra += "  ·  ⚠ pygame unavailable (playback disabled)"
+            extra += "  ·  ⚠ no audio playback available (install pygame)"
+        elif self.player.backend == "winsound":
+            extra += "  ·  playback via Windows (pygame not installed: Pause stops)"
         self.status_var.set(f"✅ Found {len(self.all_clips)} audio clips.{extra}")
 
     # ── list / sort / filter ───────────────────────────────────────────────────
@@ -1180,10 +1245,20 @@ class AudioManagerFrame(ttk.Frame):
             return
         self.player.stop()
         applied, errors, backed = 0, [], []
+        # A path_id saved before a game update can name a different clip now;
+        # never write into one that isn't the clip this mod was made for.
+        try:
+            import game_layout
+            wrong = set(game_layout.mismatched_mods(self.audio_mods, "AudioClip"))
+        except Exception:
+            wrong = set()
         for key, mod in self.audio_mods.items():
             af, wav, pid = mod["assets_file"], mod["audio_path"], mod["path_id"]
             if not os.path.exists(af):
                 errors.append(f"{mod['name']}: assets file missing"); continue
+            if key in wrong:
+                errors.append(f"{mod['name']}: skipped, that clip isn't where this mod "
+                              f"expects it (game updated?). Re-queue it."); continue
             if not os.path.exists(wav):
                 errors.append(f"{mod['name']}: replacement WAV missing"); continue
             if ensure_audio_backup(af):

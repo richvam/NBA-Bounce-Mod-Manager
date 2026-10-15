@@ -717,11 +717,22 @@ class MeshTab(tk.Frame):
             ensure_backup = self._ensure_backup
 
         applied, errors, warnings = 0, [], []
+        # A path_id saved before a game update can name a different mesh now;
+        # never write into one that isn't the mesh this mod was made for.
+        try:
+            import game_layout
+            wrong = set(game_layout.mismatched_mods(self.mesh_mods, "Mesh"))
+        except Exception:
+            wrong = set()
         for key, mod in list(self.mesh_mods.items()):
             assets_file = mod["assets_file"]
             source      = mod.get("source_path", "")
             if not os.path.exists(assets_file):
                 errors.append(f"{mod['name']}: game file not found ({assets_file})")
+                continue
+            if key in wrong:
+                errors.append(f"{mod['name']}: skipped -- that mesh isn't where this "
+                              f"mod expects it (game updated?). Re-import it.")
                 continue
             if not os.path.exists(source):
                 errors.append(f"{mod['name']}: replacement file missing ({source})")

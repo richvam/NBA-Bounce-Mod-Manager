@@ -245,7 +245,7 @@ class SliderTab(ttk.Frame):
                     text="Checking dependencies…", foreground=self.th["gold"]))
                 from slider_manager import SliderManager
                 self.after(0, lambda: self.status.configure(
-                    text="Reading game data… (level2 is 95 MB)",
+                    text="Reading game data… (the scene file is about 95 MB)",
                     foreground=self.th["gold"]))
                 sm = SliderManager(self.game_data_path).load()
                 rep = sm.validate()
@@ -367,7 +367,7 @@ class SliderTab(ttk.Frame):
             return
         self._busy = True
         self.apply_btn.state(["disabled"])
-        self.status.configure(text="Writing\u2026 (level2 is 95 MB, give it a moment)",
+        self.status.configure(text="Writing\u2026 (the scene file is about 95 MB, give it a moment)",
                               foreground=self.th["gold"])
 
         def work():

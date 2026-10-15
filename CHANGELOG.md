@@ -1,5 +1,92 @@
 # Changelog
 
+## v3.2.0
+
+### What's New
+
+- **Works with the NBA Bounce 2026–27 season update.** The update packs all game
+  data into one compressed file, `data.unity3d`, which broke every tab in
+  v3.1.0. A one-click **Prepare Game for Modding** step (Home tab or Settings)
+  unpacks it into regular game files. The game runs from these normally, which
+  has been tested in-game. Undo restores the original exactly.
+
+### Added
+
+- `modules/game_layout.py`: detects packed / prepared / re-packed-by-Steam game
+  folders; unpacks with verification (every file is written to a temp name and
+  read back before anything is swapped in); finds which file holds the team
+  containers, team list, team-select grid, slider data and court materials for
+  the installed build, cached per build.
+- **Backups belong to a game build.** When the game's build-guid changes, every
+  backup the app made (`.original_backup`, `.teamslot_backup`,
+  `.gridscale_backup`, `.navpatch_backup`, `.sliders_backup`) is moved into
+  `_old_build_backups/` instead of being restored over the new game.
+- **Queued mods follow their object by name.** The update renumbered every
+  object, so a saved mod pointed at the wrong texture (e.g. the Lakers avatar
+  mod at id 213 would have landed on the Raptors shirt). On startup, mods are
+  re-matched by name and you confirm the change. Texture, audio and mesh Apply
+  now refuse to write any mod whose target no longer has the expected name.
+
+### Changed
+
+- Team containers moved from `sharedassets1.assets` to `sharedassets0.assets`.
+  The slider data moved from `level2` + `sharedassets2.assets` to `level1` +
+  `sharedassets1.assets`. The team-select grid moved into `level1`. All of these
+  are now looked up rather than hardcoded, as is the grid object (`GridLayOut`)
+  and the stock floor texture.
+- **Floor Patterns works on the new build.** The court materials can no longer
+  reach the eight spare textures in `resources.assets` that patterns used to
+  overwrite. Instead, the first apply adds eight `FLOORSLOT_n` textures (plain
+  DXT1, 10 mips) to the courts' file in one verified rebuild. Pattern pixels
+  stream from the end of its `.resS`, and Apply Mods re-writes them every run,
+  like texture mods. Revert points the courts back at the stock floor. The
+  slot textures are hidden from the Textures tab.
+- The stock floor preview is found by name and re-extracted per game build.
+  Before, it matched an old path_id, which on the new build is the Pelicans
+  logo.
+- **Added teams show up on the 2026-27 build.** The update gave the boot scene
+  `level0` its own `BasketTeamManager`, and that's the copy the game keeps
+  (decompiled: `TeamSelectionSettings.Initialize` builds the grid from
+  `BasketTeamManager.getTeams()`, which `load()` fills from that manager's
+  `m_aoBundledTeams`). Teams were only added to `level1`'s list, so they never
+  appeared. Every scene with a team manager is now found per build
+  (`team_scenes`) and gets the same edits: Add Teams, team order, Remove Added
+  Teams and Reset. The Teams tab spots teams that are missing from a scene's
+  list (teams added by earlier versions) and offers to add them.
+- **Saves tab: GOAT (Mountain) unlockables.** The 75 GOAT items (characters,
+  shoes, footprints, balls) were never in `level1`, so the tab never offered
+  them. They're now read from the `GOATUnlocks` ScriptableObject, decoded
+  with the game DLL's own field layout (a plain string scan misreads it,
+  because a record's prize id can repeat another id). They appear under a new
+  **GOAT** filter. Unlock Everything and Unlock Selected write them to the
+  save's separate Mountain array. Every written GOAT id must be enabled in that
+  list, and the catalog cache was bumped so old caches rebuild.
+- **Faster, visible startup.** The console now prints each startup step with
+  elapsed seconds. Gameplay Sliders and Floor Patterns no longer load at
+  startup; they pick up the game layout when first opened
+  (`game_layout.attach`). The queued-mod check is skipped when neither the
+  game build nor any mod list has changed. And a missing optional package
+  (dnfile) no longer re-runs pip for every package on every launch.
+- **Startup no longer stalls for ~30 s when pygame isn't installed.** The Audio
+  tab ran `pip install pygame` while the window was being built, on every
+  launch. On Python 3.14, which pygame has no wheel for, that tried to compile
+  pygame and failed after half a minute. Nothing is installed at startup now.
+  Without pygame, audio preview uses Windows' built-in `winsound` (WAV; Pause
+  stops the clip). If the window ever takes more than 15 s to build, the console
+  prints where it's stuck.
+- Unlock counts are now distinct ids. The game itself sometimes saves an
+  achievement twice, so a successful unlock used to read as 306 → 303.
+- Gameplay Sliders **Revert** now restores field by field instead of copying the
+  backup over the file. `level1` now also holds the team list, and a whole-file
+  copy would undo team changes.
+
+### Known limitations
+
+- The team-select grid and team list now share `level1`. **Remove Added Teams**
+  restores `level1` from its pre-add backup, which also returns the grid
+  size/position to what it was before the first team was added. Re-apply the
+  layout afterwards.
+
 ## v3.1.0
 
 ### What's New

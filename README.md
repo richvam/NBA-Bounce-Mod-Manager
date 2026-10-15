@@ -60,6 +60,15 @@ Click **Settings** in the top bar and set:
 
 Click **Save & Reload**. Every tab reads from these same two paths.
 
+### Prepare the Game (once, and again after each game update)
+
+Since the 2026–27 season update (October 2026), NBA Bounce ships its data packed into one compressed file, `NBA Bounce_Data\data.unity3d`. The mod manager can't edit that file directly, so the first time you open it you'll be asked to **Prepare Game for Modding**:
+
+- The packed file is unpacked into regular game files (about 700 MB). The game runs from these normally, which has been tested in-game.
+- The original is kept as `data.unity3d.original_backup`. **Settings → Game Files → Undo** puts the game back exactly as it was.
+- When Steam updates the game, or you run *Verify integrity of game files*, it re-packs the game and the Home tab asks you to prepare it again. Backups from the older build are moved into `NBA Bounce_Data\_old_build_backups\`, so they can never be restored over the new version. Nothing is deleted.
+- Queued texture, audio and mesh mods are matched to the updated game **by name**. The app shows what moved and asks before saving. A mod that can't be matched is skipped by Apply and is never written into the wrong object.
+
 ---
 
 ## Home Screen
@@ -155,6 +164,8 @@ Give any team's court a different wood-grain look, chosen from a library of patt
 
 Up to 8 custom patterns can be active across the league at once (the pattern library itself is unlimited; you just can't have more than 8 different ones assigned at the same time).
 
+On the 2026–27 game build, the first **Apply to game** adds 8 pattern textures (`FLOORSLOT_1`–`8`) to the courts' file. This is a one-time rebuild that's checked object by object. The patterns are written into those textures. They're hidden from the Textures tab, and **▶ Apply Mods** re-writes them automatically each time it runs. **Restore Game Files** removes them along with everything else, so open Floor Patterns and apply again afterwards.
+
 ---
 
 ## Gameplay Sliders
@@ -187,11 +198,14 @@ Pick a team from the dropdown, then click any color swatch to open the built-in 
 ## Saves
 
 Unlocks cosmetics by editing your save file directly. It touches no `.assets`
-file at all — it only reads the game's `level1` scene to work out what exists,
-and writes to your save in
+file at all. It only reads the game's files to work out what exists: the main
+list from `level1`, plus the GOAT (Mountain) list, which is decoded from the
+game's own data definitions. It writes to your save in
 `%USERPROFILE%\AppData\LocalLow\UnfinishedPixel\NBA Bounce\`.
 
-- **Unlock Everything**: unlock every item available in your game build
+- **Unlock Everything**: unlock every item available in your game build,
+  GOAT characters, shoes, footprints and balls included (pick **GOAT** in the
+  filter to see just those)
 - **Unlock Selected**: pick individual rows instead
 - **Back Up Save / Restore Backup**: timestamped copies, kept outside the synced
   folder so they don't eat Steam Cloud quota
@@ -364,7 +378,7 @@ automatically the first time you launch v3.
 <details>
 <summary>How assets are patched (click to expand)</summary>
 
-NBA Bounce uses Unity 6 (`6000.0.37f1`). Textures and audio are stored across multiple `.assets` files, with pixel/audio data in companion `.resS`/`.resource` files.
+NBA Bounce uses Unity 6 (`6000.0.37f1`). Textures and audio are stored across multiple `.assets` files, with pixel/audio data in companion `.resS`/`.resource` files. Since the 2026–27 season update, the game ships those files inside `data.unity3d`. The app unpacks them once (`modules/game_layout.py`) and then finds which file holds what by looking (team containers, the AI-difficulty scene, the team-select grid) instead of relying on fixed file names.
 
 Every tool in this app uses the same **in-place binary patch** strategy:
 
@@ -419,7 +433,9 @@ All packages are installed automatically by `SETUP_AND_RUN.bat` or by `app.py` i
 | **A replacement logo is cut off in game** | Fixed in v2.1.1 — click Apply Mods again and the sprite crop gets widened to the full canvas. If the texture is a multi-sprite atlas, importing it lists the regions your artwork has to stay inside |
 | **Game crashes after applying** | Click Restore Game Files (or Restore Audio) to revert, then check your replacement file is valid |
 | **Audio replacement doesn't seem to change anything** | Some clips stream continuously and may ignore replacement; see the note under Audio above |
-| **Mod not showing after a game update** | Game updates overwrite `.assets` files; just click Apply Mods / Apply Audio Mods again |
+| **Mod not showing after a game update** | Game updates re-pack the game. Accept **Prepare Game for Modding** on the Home tab, confirm the mod-list update, then click Apply Mods / Apply Audio Mods again |
+| **Everything is empty / "No asset files found"** | The game is packed (`data.unity3d`). Click **Prepare Game for Modding** on the Home tab |
+| **Floor patterns disappeared** | Restore Game Files or a Teams reset puts the courts' file back to stock. Open Floor Patterns and click Apply to game again |
 | **A mesh replacement is over budget, invisible, or inside-out** | See the troubleshooting table in [docs/MESH_MODDING_GUIDE.md](docs/MESH_MODDING_GUIDE.md) |
 | **Court Colors / Floor Patterns changes not visible** | Changes only appear after fully quitting and relaunching the game |
 

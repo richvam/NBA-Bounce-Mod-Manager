@@ -62,17 +62,23 @@ import re
 import shutil
 import struct
 
+# Pre-2026-27-update file names. game_layout.configure() replaces them with what
+# the installed build actually uses (see apply_layout below).
 CONTAINER_ASSETS_FILE = "sharedassets1.assets"
 MANAGER_SCENE_FILE    = "level1"
 GRID_SCENE_FILE       = "level2"
+# Every scene with its own BasketTeamManager team list; MANAGER_SCENE_FILE is
+# the first, the one the game actually uses. Since the 2026-27 update that is
+# ("level0", "level1"): an added team only shows up if level0 lists it.
+TEAM_SCENES           = ("level1",)
 CONTAINER_SCRIPT_CLASS = "BasketTeamContainer"
 
-TEAM_BACKUP   = ".teamslot_backup"     # sharedassets1.assets + level1
-SCALE_BACKUP  = ".gridscale_backup"    # level2
+TEAM_BACKUP   = ".teamslot_backup"     # containers file + team scene
+SCALE_BACKUP  = ".gridscale_backup"    # grid scene
 NAV_BACKUP    = ".navpatch_backup"     # Assembly-CSharp.dll
 DLL_REL       = os.path.join("Managed", "Assembly-CSharp.dll")
 
-GRID_GO_PATH_ID = 74641        # 'GridLayOut' in level2, parent of the tile grid
+GRID_GO_PATH_ID = 74641        # 'GridLayOut', parent of the tile grid (looked up per build)
 FIRST_CLONE_ID       = -101    # unique IDs for added teams run downward
 FIRST_CLONE_PATH_ID  = 90000001
 FIRST_ART_PATH_ID    = 91000001    # cloned textures and sprites
@@ -279,7 +285,7 @@ def _read_containers(game_data, script_pid):
     finally:
         close_env(env)
     if not out:
-        raise TeamError("No team containers found in sharedassets1.assets.")
+        raise TeamError(f"No team containers found in {CONTAINER_ASSETS_FILE}.")
     return out
 
 
@@ -360,11 +366,13 @@ def scan_pointer_arrays(raw, container_pids):
     return out
 
 
-def find_bundled_team_array(game_data, container_pids):
+def find_bundled_team_array(game_data, container_pids, scene=None):
     """(manager_path_id, raw, offset_of_count, count, file_id) for the longest
-    team list in level1 -- m_aoBundledTeams."""
+    team list in a team scene (default: the one the game uses) --
+    m_aoBundledTeams."""
     import UnityPy
-    env = UnityPy.load(os.path.join(game_data, MANAGER_SCENE_FILE))
+    scene = scene or MANAGER_SCENE_FILE
+    env = UnityPy.load(os.path.join(game_data, scene))
     best = None
     try:
         for obj in env.objects:
@@ -380,8 +388,71 @@ def find_bundled_team_array(game_data, container_pids):
     finally:
         close_env(env)
     if best is None:
-        raise TeamError("Could not find the bundled-team list in level1.")
+        raise TeamError(f"Could not find the bundled-team list in {scene}.")
     return best
+
+
+def _added_pids(containers):
+    return [c["path_id"] for c in sorted(containers.values(), key=lambda c: c["path_id"])
+            if c["path_id"] >= FIRST_CLONE_PATH_ID]
+
+
+def team_scene_gaps(game_data, containers=None):
+    """{scene: [path_ids of added teams that scene's list is missing]} for the
+    team scenes that are out of step. Teams added by v3.1 (or v3.2 before this
+    fix) on the 2026-27 build went into level1 only; the game reads level0."""
+    if containers is None:
+        containers = _read_containers(game_data, find_container_script(game_data))
+    added = _added_pids(containers)
+    if not added or len(TEAM_SCENES) < 2:
+        return {}
+    pids = {c["path_id"] for c in containers.values()}
+    gaps = {}
+    for scene in TEAM_SCENES:
+        _m, raw, off, count, _f = find_bundled_team_array(game_data, pids, scene)
+        listed = {struct.unpack_from("<iq", raw, off + 4 + k * 12)[1] for k in range(count)}
+        missing = [p for p in added if p not in listed]
+        if missing:
+            gaps[scene] = missing
+    return gaps
+
+
+def _append_to_team_list(game_data, scene, append_pids, all_pids, progress=None):
+    """Append container path_ids to one scene's m_aoBundledTeams (a rebuild of
+    that scene, verified object by object). Backs the scene up first."""
+    path = os.path.join(game_data, scene)
+    mgr_pid, mgr_raw, count_off, listed, file_id = \
+        find_bundled_team_array(game_data, all_pids, scene)
+    backup(path)
+
+    def grow(env):
+        obj = next(o for o in env.objects if o.path_id == mgr_pid)
+        raw = obj.get_raw_data()
+        if raw[count_off:count_off + 4] != struct.pack("<i", listed):
+            raise TeamError(f"{scene} changed while this ran; try again.")
+        end = count_off + 4 + listed * 12
+        added = b"".join(struct.pack("<iq", file_id, p) for p in append_pids)
+        obj.set_raw_data(raw[:count_off] + struct.pack("<i", listed + len(append_pids))
+                         + raw[count_off + 4:end] + added + raw[end:])
+        return {mgr_pid}
+
+    _rebuild(path, grow, expect_added=0, progress=progress)
+    return listed + len(append_pids)
+
+
+def sync_team_scenes(game_data, progress=None):
+    """Put every added team into every scene's team list. Returns the rebuilt
+    scene paths ([] when nothing was missing)."""
+    containers = _read_containers(game_data, find_container_script(game_data))
+    gaps = team_scene_gaps(game_data, containers)
+    pids = {c["path_id"] for c in containers.values()}
+    rebuilt = []
+    for scene, missing in gaps.items():
+        if progress:
+            progress(f"Adding {len(missing)} team(s) to {scene} ...")
+        _append_to_team_list(game_data, scene, missing, pids, progress)
+        rebuilt.append(os.path.join(game_data, scene))
+    return rebuilt
 
 
 def list_teams(game_data):
@@ -891,13 +962,15 @@ def add_teams(game_data, source_name, count=1, base_name="New Team",
         used_ids.add(uid)
         used_pids.add(pid)
 
-    mgr_pid, mgr_raw, count_off, listed, file_id = \
-        find_bundled_team_array(game_data, used_pids | {c["path_id"] for c in clones})
+    all_pids = used_pids | {c["path_id"] for c in clones}
+    # Make sure every team scene's list can be found before touching anything.
+    for scene in TEAM_SCENES:
+        find_bundled_team_array(game_data, all_pids, scene)
+    gaps = team_scene_gaps(game_data, containers)
 
     if progress:
         progress("Backing up game files ...")
     backup(shared)
-    backup(level1)
 
     def insert(env):
         for c in clones:
@@ -906,21 +979,18 @@ def add_teams(game_data, source_name, count=1, base_name="New Team",
 
     _rebuild(shared, insert, expect_added=count, progress=progress)
 
-    def grow(env):
-        obj = next(o for o in env.objects if o.path_id == mgr_pid)
-        raw = obj.get_raw_data()
-        if raw[count_off:count_off + 4] != struct.pack("<i", listed):
-            raise TeamError("level1 changed while this ran; try again.")
-        end = count_off + 4 + listed * 12
-        added = b"".join(struct.pack("<iq", file_id, c["path_id"]) for c in clones)
-        obj.set_raw_data(raw[:count_off] + struct.pack("<i", listed + count)
-                         + raw[count_off + 4:end] + added + raw[end:])
-        return {mgr_pid}
-
-    _rebuild(level1, grow, expect_added=0, progress=progress)
+    # Every scene with a team list gets the new teams -- plus any earlier
+    # added team it was missing, which repairs lists left half-updated.
+    rebuilt, primary_count = [shared], None
+    for scene in TEAM_SCENES:
+        append = gaps.get(scene, []) + [c["path_id"] for c in clones]
+        n = _append_to_team_list(game_data, scene, append, all_pids, progress)
+        rebuilt.append(os.path.join(game_data, scene))
+        if scene == MANAGER_SCENE_FILE:
+            primary_count = n
 
     return {"added": count, "names": [c["name"] for c in clones],
-            "bundled_count": listed + count, "rebuilt": [shared, level1]}
+            "bundled_count": primary_count, "rebuilt": rebuilt}
 
 
 def remove_added_teams(game_data, progress=None):
@@ -930,9 +1000,9 @@ def remove_added_teams(game_data, progress=None):
     saved team ID with no missing-key check, and the backup is a known-good
     state rather than one this app reasoned its way to.
     """
-    shared, level1 = _require(game_data, CONTAINER_ASSETS_FILE, MANAGER_SCENE_FILE)
+    shared, = _require(game_data, CONTAINER_ASSETS_FILE)
     restored = []
-    for path in (shared, level1):
+    for path in [shared] + [os.path.join(game_data, s) for s in TEAM_SCENES]:
         bak = path + TEAM_BACKUP
         if os.path.exists(bak):
             if progress:
@@ -949,6 +1019,35 @@ def remove_added_teams(game_data, progress=None):
 # Team-select grid scale (level2, in place)
 # ---------------------------------------------------------------------------
 
+def _grid_candidates(env, kinds):
+    """Objects to examine for the grid's (Rect)Transform, cheapest first.
+
+    Since the 2026-27 update the grid lives in level1 -- 475,000 objects, tens
+    of thousands of them Transforms -- so reading every Transform to find the
+    one whose GameObject is GridLayOut took several seconds per call (far more
+    on Windows) and the Teams tab makes several. A GameObject lists its own
+    components, and its Transform is among them: look there first and fall
+    back to the full scan only if that doesn't pan out.
+    """
+    objects = env.file.objects
+    go = objects.get(GRID_GO_PATH_ID)
+    if go is not None:
+        try:
+            comps = go.read().m_Component
+            pids = []
+            for c in comps:
+                ptr = getattr(c, "component", None) or (c[1] if isinstance(c, (tuple, list)) else None)
+                pid = getattr(ptr, "path_id", None) or getattr(ptr, "m_PathID", None)
+                if pid:
+                    pids.append(pid)
+            hits = [objects[p] for p in pids if p in objects and objects[p].type.name in kinds]
+            if hits:
+                return hits
+        except Exception:
+            pass
+    return [o for o in env.objects if o.type.name in kinds]
+
+
 def _grid_transform(game_data):
     """(transform path_id, raw, byte_start, scale) for the grid container.
 
@@ -962,9 +1061,7 @@ def _grid_transform(game_data):
     env = UnityPy.load(scene)
     hit = None
     try:
-        for obj in env.objects:
-            if obj.type.name not in ("Transform", "RectTransform"):
-                continue
+        for obj in _grid_candidates(env, ("Transform", "RectTransform")):
             try:
                 d = obj.read()
             except Exception:
@@ -979,7 +1076,7 @@ def _grid_transform(game_data):
     finally:
         close_env(env)
     if hit is None:
-        raise TeamError("Could not find the team-select grid in level2.")
+        raise TeamError(f"Could not find the team-select grid in {GRID_SCENE_FILE}.")
     return hit
 
 
@@ -1014,7 +1111,7 @@ def set_grid_scale(game_data, scale):
     scene = os.path.join(game_data, GRID_SCENE_FILE)
     _pid, raw, start, current = _grid_transform(game_data)
     if start is None:
-        raise TeamError("Could not locate the grid object in level2.")
+        raise TeamError(f"Could not locate the grid object in {GRID_SCENE_FILE}.")
     off = _scale_offset(raw, current)
     old = raw[off:off + 12]
     new = struct.pack("<3f", float(scale), float(scale), float(scale))
@@ -1068,9 +1165,7 @@ def _grid_rect(game_data):
     env = UnityPy.load(os.path.join(game_data, GRID_SCENE_FILE))
     hit = None
     try:
-        for obj in env.objects:
-            if obj.type.name != "RectTransform":
-                continue
+        for obj in _grid_candidates(env, ("RectTransform",)):
             try:
                 d = obj.read()
             except Exception:
@@ -1086,7 +1181,7 @@ def _grid_rect(game_data):
     finally:
         close_env(env)
     if hit is None:
-        raise TeamError("Could not find the team-select grid in level2.")
+        raise TeamError(f"Could not find the team-select grid in {GRID_SCENE_FILE}.")
     return hit
 
 
@@ -1104,7 +1199,7 @@ def set_grid_position(game_data, x, y):
     scene = os.path.join(game_data, GRID_SCENE_FILE)
     raw, start, off, _cur, _scale = _grid_rect(game_data)
     if start is None:
-        raise TeamError("Could not locate the grid object in level2.")
+        raise TeamError(f"Could not locate the grid object in {GRID_SCENE_FILE}.")
     old = raw[off:off + 8]
     new = struct.pack("<2f", x, y)
     if old == new:
@@ -1126,7 +1221,7 @@ def set_grid_position(game_data, x, y):
 # that sort is switched off (apply_code_layout(custom_order=True)). The
 # HardWoods tiles come from their own list and are never sorted.
 
-def _team_lists(game_data, container_pids):
+def _team_lists(game_data, container_pids, scene=None):
     """Where the team lists live in level1 and what they hold, in order.
 
     {"manager": path_id, "byte_start": int, "raw": bytes,
@@ -1134,7 +1229,8 @@ def _team_lists(game_data, container_pids):
      "hardwoods": same or None}
     """
     import UnityPy
-    env = UnityPy.load(os.path.join(game_data, MANAGER_SCENE_FILE))
+    scene = scene or MANAGER_SCENE_FILE
+    env = UnityPy.load(os.path.join(game_data, scene))
     best = None
     try:
         for obj in env.objects:
@@ -1153,7 +1249,7 @@ def _team_lists(game_data, container_pids):
     finally:
         close_env(env)
     if best is None:
-        raise TeamError("Could not find the bundled-team list in level1.")
+        raise TeamError(f"Could not find the bundled-team list in {scene}.")
     pid, start, raw, top, arrays = best
 
     def describe(arr):
@@ -1179,24 +1275,27 @@ def read_team_order(game_data, container_pids):
 def set_team_order(game_data, container_pids, new_order):
     """Rewrite m_aoBundledTeams in a new order. Same entries, same count, so
     the edit is length-preserving and nothing else in level1 moves."""
-    level1 = os.path.join(game_data, MANAGER_SCENE_FILE)
-    lists = _team_lists(game_data, container_pids)
-    cur = lists["bundled"]
     new_order = [int(p) for p in new_order]
-    if sorted(new_order) != sorted(cur["pids"]):
-        raise TeamError("The new order must contain exactly the teams already "
-                        "in the list. Refresh the Teams tab and try again.")
-    if new_order == cur["pids"]:
-        return 0
-    if lists["byte_start"] is None:
-        raise TeamError("Could not locate the team list in level1.")
-    body = cur["offset"] + 4
-    old = lists["raw"][body:body + cur["count"] * 12]
-    new = b"".join(struct.pack("<iq", cur["file_id"], p) for p in new_order)
-    backup(level1)
-    _patch_in_place(level1, [(lists["byte_start"] + body, old, new)],
-                    "The team list")
-    return 1
+    plans = []
+    for scene in TEAM_SCENES:          # every scene's copy gets the same order
+        lists = _team_lists(game_data, container_pids, scene)
+        cur = lists["bundled"]
+        if sorted(new_order) != sorted(cur["pids"]):
+            raise TeamError("The new order must contain exactly the teams already "
+                            f"in the list ({scene} differs). Refresh the Teams tab "
+                            "and try again.")
+        if new_order == cur["pids"]:
+            continue
+        if lists["byte_start"] is None:
+            raise TeamError(f"Could not locate the team list in {scene}.")
+        body = cur["offset"] + 4
+        old = lists["raw"][body:body + cur["count"] * 12]
+        new = b"".join(struct.pack("<iq", cur["file_id"], p) for p in new_order)
+        plans.append((os.path.join(game_data, scene), lists["byte_start"] + body, old, new))
+    for path, at, old, new in plans:
+        backup(path)
+        _patch_in_place(path, [(at, old, new)], "The team list")
+    return 1 if plans else 0
 
 
 def sort_key(team):
@@ -1276,6 +1375,28 @@ RESET_FILES = (CONTAINER_ASSETS_FILE, MANAGER_SCENE_FILE,
                "resources.assets", "globalgamemanagers")
 
 
+def apply_layout(layout):
+    """Point this module at the files the installed game build uses.
+
+    Called by game_layout.configure(). Since the 2026-27 season update the
+    containers live in sharedassets0.assets and the team-select grid shares
+    level1 with the team list; on older builds the defaults above apply. Every
+    function here reads these names at call time.
+    """
+    global CONTAINER_ASSETS_FILE, MANAGER_SCENE_FILE, GRID_SCENE_FILE
+    global GRID_GO_PATH_ID, RESET_FILES
+    CONTAINER_ASSETS_FILE = layout.get("containers_file", CONTAINER_ASSETS_FILE)
+    global TEAM_SCENES
+    scenes = tuple(layout.get("team_scenes") or ())
+    MANAGER_SCENE_FILE = layout.get("team_scene", scenes[0] if scenes else MANAGER_SCENE_FILE)
+    TEAM_SCENES = scenes or (MANAGER_SCENE_FILE,)
+    GRID_SCENE_FILE = layout.get("grid_scene", GRID_SCENE_FILE)
+    GRID_GO_PATH_ID = int(layout.get("grid_go_path_id", GRID_GO_PATH_ID))
+    # dict.fromkeys: the grid and team-list scene can now be the same file.
+    RESET_FILES = tuple(dict.fromkeys((CONTAINER_ASSETS_FILE,) + TEAM_SCENES
+                                      + ("resources.assets", "globalgamemanagers")))
+
+
 def _stock_source(path):
     """The best pristine copy of a file: the app's .original_backup (taken
     before any mod touched it), else the team-slot backup."""
@@ -1300,9 +1421,9 @@ def reset_plan(game_data):
             steps.append(f"{name}  ←  {os.path.basename(src)}")
     try:
         if get_grid_scale(game_data) != 1.0:
-            steps.append("level2: grid size back to 100%")
+            steps.append(f"{GRID_SCENE_FILE}: grid size back to 100%")
         if get_grid_position(game_data) != STOCK_GRID_POSITION:
-            steps.append("level2: grid position back to centre")
+            steps.append(f"{GRID_SCENE_FILE}: grid position back to centre")
     except TeamError:
         pass
     if os.path.exists(os.path.join(game_data, DLL_REL) + NAV_BACKUP):
@@ -1374,9 +1495,9 @@ def reset_team_changes(game_data, progress=None):
     if os.path.isfile(os.path.join(game_data, GRID_SCENE_FILE)):
         say("Resetting the team-select grid …")
         if set_grid_scale(game_data, 1.0):
-            restored.append("level2 (grid size)")
+            restored.append(f"{GRID_SCENE_FILE} (grid size)")
         if set_grid_position(game_data, *STOCK_GRID_POSITION):
-            restored.append("level2 (grid position)")
+            restored.append(f"{GRID_SCENE_FILE} (grid position)")
 
     dll = os.path.join(game_data, DLL_REL)
     if os.path.isfile(dll + NAV_BACKUP) and not _same_bytes(dll, dll + NAV_BACKUP):
@@ -2682,3 +2803,11 @@ def detach_resource_art(game_data, path_id, progress=None):
             # nothing in it moved and its mods do not need re-applying.
             "rebuilt": [res_path, ggm_path]}
 
+
+# Pick up the file layout game_layout.configure() resolved for this game build
+# (this module may be imported after that ran -- see game_layout.attach()).
+try:
+    import game_layout as _game_layout
+    _game_layout.attach(__import__("sys").modules[__name__])
+except Exception:
+    pass

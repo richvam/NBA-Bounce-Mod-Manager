@@ -609,6 +609,57 @@ def _records_from_blob(b):
     return out
 
 
+def _goat_catalog(game_data_path, progress=None):
+    """Enabled ids from the GOATUnlocks ScriptableObject (class UnlockableSO).
+
+    Decoded field by field from the game's own Assembly-CSharp.dll metadata
+    (slider_manager's walker), because the record holds several strings -- a
+    prize id can repeat another unlockable's id -- so a string scan would
+    misread it. Returns [] if anything about the layout is unexpected; the
+    Saves tab then simply offers no GOAT items, which is the safe failure.
+    """
+    import UnityPy
+    try:
+        import slider_manager as slm
+        asm = slm.Assembly(os.path.join(game_data_path, "Managed", "Assembly-CSharp.dll"))
+        walker = slm.Walker(asm)
+    except Exception:
+        return []
+    names = sorted(f for f in os.listdir(game_data_path) if f.endswith(".assets"))
+    for fname in names:
+        if progress:
+            progress(f"Looking for the GOAT unlockables in {fname} ...")
+        env = UnityPy.load(os.path.join(game_data_path, fname))
+        try:
+            for obj in env.objects:
+                if obj.type.name != "MonoBehaviour":
+                    continue
+                try:
+                    raw = obj.get_raw_data()
+                except Exception:
+                    continue
+                if raw.count(b"GOAT_") < 20:
+                    continue
+                try:
+                    data, _name, _slots, used = walker.monobehaviour(raw, "UnlockableSO")
+                except Exception:
+                    continue
+                items = data.get("m_aoUnlockables")
+                if used != len(raw) or not isinstance(items, list) or not items:
+                    continue
+                ids = [u.get("m_sID") for u in items if isinstance(u, dict)]
+                if (len(ids) != len(items) or len(set(ids)) != len(ids)
+                        or not all(isinstance(i, str) and i.startswith("GOAT_") for i in ids)):
+                    continue
+                return [u["m_sID"] for u in items if u.get("m_bEnabled")]
+        finally:
+            try:
+                env.files.clear()
+            except Exception:
+                pass
+    return []
+
+
 def extract_catalog(game_data_path, use_cache=True, progress=None):
     """Build {"main": [...], "goat": [...]} of ENABLED unlockable ids.
 
@@ -622,7 +673,9 @@ def extract_catalog(game_data_path, use_cache=True, progress=None):
     if not os.path.exists(level1):
         raise SaveError(f"level1 not found in {game_data_path}")
     st = os.stat(level1)
-    key = f"{st.st_size}:{int(st.st_mtime)}"
+    # v2: the GOAT list is read from the .assets files too (see _goat_catalog),
+    # so a v1 cache -- which always had an empty GOAT list -- is rebuilt.
+    key = f"v2:{st.st_size}:{int(st.st_mtime)}"
 
     if use_cache and os.path.exists(CATALOG_CACHE):
         try:
@@ -666,6 +719,14 @@ def extract_catalog(game_data_path, use_cache=True, progress=None):
 
     main = [s for s, en in best_main if en == 1]
     goat = [s for s, en in best_goat if en == 1]
+    if not goat:
+        # The GOAT (Mountain) unlockables were never in level1: they live in a
+        # ScriptableObject ("GOATUnlocks") in the shared .assets -- old
+        # sharedassets1, sharedassets0 since the 2026-27 update.
+        try:
+            goat = _goat_catalog(game_data_path, progress)
+        except Exception:
+            goat = []
     if not main:
         raise SaveError("Found the unlockables list but every entry was "
                         "disabled -- refusing to produce an empty catalog.")
@@ -692,11 +753,13 @@ def read_unlocks(save_path):
 
 
 def build_unlocked(src, dst, catalog, ids=None, include_goat=False,
-                   clear_popups=True):
+                   clear_popups=True, goat_ids=None):
     """Write `dst` with the unlock arrays expanded.
 
     ids           explicit id list; defaults to the whole enabled main catalog
     include_goat  also expand the Mountain/GOAT array (union with what's there)
+    goat_ids      explicit GOAT ids to add (implies include_goat); every one
+                  must be in the enabled GOAT catalog
     clear_popups  empty the "new unlock!" queues so the game doesn't queue
                   hundreds of popups on first launch
 
@@ -743,11 +806,23 @@ def build_unlocked(src, dst, catalog, ids=None, include_goat=False,
     next_id = set_array(m, MAIN_ARRAY, target_main, next_id)
     if clear_popups:
         next_id = set_array(m, SEEN_ARRAY, [], next_id)
-    if include_goat and enabled_goat:
-        merged = list(dict.fromkeys(before_goat + enabled_goat))
-        next_id = set_array(m, GOAT_ARRAY, merged, next_id)
-        if clear_popups:
-            next_id = set_array(m, GOAT_SEEN_ARRAY, [], next_id)
+    if goat_ids is not None:
+        bad = [i for i in goat_ids if i not in set(enabled_goat) and i not in before_goat]
+        if bad:
+            raise SaveError(f"{len(bad)} GOAT id(s) are not in the enabled GOAT "
+                            f"catalog: {bad[:6]}")
+        add_goat = list(goat_ids)
+    else:
+        add_goat = enabled_goat if include_goat else []
+    if add_goat and GOAT_ARRAY + "_COUNT_" not in _index(m):
+        raise SaveError("This save has no GOAT (Mountain) progress block yet. "
+                        "Open GOAT mode in the game once, save, then try again.")
+    if add_goat:
+        merged = list(dict.fromkeys(before_goat + add_goat))
+        if merged != before_goat:
+            next_id = set_array(m, GOAT_ARRAY, merged, next_id)
+            if clear_popups and GOAT_SEEN_ARRAY + "_COUNT_" in _index(m):
+                next_id = set_array(m, GOAT_SEEN_ARRAY, [], next_id)
 
     out = build_save(m)
     tmp = dst + ".tmp"
@@ -767,6 +842,9 @@ def build_unlocked(src, dst, catalog, ids=None, include_goat=False,
         added = [i for i in after_main if i not in before_main]
         if any(i not in allowed for i in added):
             raise SaveError("wrote an id outside the enabled catalog")
+        added_goat = [i for i in after_goat if i not in before_goat]
+        if any(i not in set(enabled_goat) for i in added_goat):
+            raise SaveError("wrote a GOAT id outside the enabled GOAT catalog")
     except Exception:
         try:
             os.remove(tmp)
@@ -775,8 +853,11 @@ def build_unlocked(src, dst, catalog, ids=None, include_goat=False,
         raise
     os.replace(tmp, dst)
 
-    return {"main_before": len(before_main), "main_after": len(after_main),
-            "goat_before": len(before_goat), "goat_after": len(after_goat),
+    # Distinct counts: the game itself sometimes saves an id twice (seen:
+    # ACH_18/19/27), and the rewrite stores each once, so raw lengths would
+    # make an unlock look like a loss (306 -> 303).
+    return {"main_before": len(set(before_main)), "main_after": len(set(after_main)),
+            "goat_before": len(set(before_goat)), "goat_after": len(set(after_goat)),
             "objects": nobj, "max_abs_id": hi, "bytes": len(out),
             "catalog_main": len(enabled_main), "catalog_goat": len(enabled_goat)}
 

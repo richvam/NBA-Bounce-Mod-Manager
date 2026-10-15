@@ -1,6 +1,21 @@
 import sys
 import subprocess
 import os
+import time
+
+# ── Startup progress in the console window ─────────────────────────────────────
+# Launching from RUN.bat leaves a console open while Python loads libraries and
+# reads the game files. Say what is happening there, with elapsed seconds, so a
+# slow start is visibly working instead of a blank window.
+_BOOT_T0 = time.time()
+
+def boot_log(msg):
+    try:
+        print(f"[{time.time() - _BOOT_T0:5.1f}s] {msg}", flush=True)
+    except Exception:
+        pass            # pythonw / no console: nothing to print to
+
+boot_log("Starting NBA Bounce Mod Manager...")
 
 # ── Where everything lives ─────────────────────────────────────────────────────
 # app.py is the only Python file at the top of the folder; the feature modules
@@ -21,15 +36,28 @@ REQUIRED_PACKAGES = [
 ]
 
 def _ensure_dependencies():
+    boot_log("Loading UnityPy, Pillow and dnfile...")
     try:
         import UnityPy
         from PIL import Image
-        import dnfile          # Gameplay Sliders; probe it or the early return below hides it
-        return True
-    except ImportError:
-        pass
+    except ImportError as e:
+        boot_log(f"Missing Python package ({getattr(e, 'name', None) or e}).")
+    else:
+        try:
+            import dnfile      # Gameplay Sliders; probe it or the early return below hides it
+            return True
+        except ImportError:
+            # Only the optional one is missing: install just that, once, instead
+            # of re-running pip for every package on every launch (which is
+            # what used to make a start take a minute when this kept failing).
+            boot_log("Installing dnfile (needed by Gameplay Sliders)...")
+            subprocess.run([sys.executable, "-m", "pip", "install", "dnfile"],
+                           capture_output=True, text=True)
+            return True
     failed = []
-    for pkg in REQUIRED_PACKAGES:
+    boot_log("Some Python packages are missing -- installing them (one time).")
+    for i, pkg in enumerate(REQUIRED_PACKAGES, 1):
+        boot_log(f"  pip install {pkg}  ({i}/{len(REQUIRED_PACKAGES)})")
         r = subprocess.run([sys.executable, "-m", "pip", "install", pkg, "--upgrade"],
                            capture_output=True, text=True)
         if r.returncode != 0:
@@ -55,6 +83,7 @@ if status is not True:
     root.destroy(); sys.exit(1)
 
 # ── Imports ────────────────────────────────────────────────────────────────────
+boot_log("Loading the app's modules...")
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json, shutil, threading, re, struct
@@ -65,10 +94,11 @@ import app_paths
 from audio_manager import AudioManagerFrame, THEMES
 import retro_eras
 import sprite_crop
+import game_layout
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
-APP_VERSION    = "3.1.0"
+APP_VERSION    = "3.2.0"
 CONFIG_FILE    = app_paths.user("config.json")
 MODS_META_FILE = "mods.json"
 BACKUP_SUFFIX  = ".original_backup"
@@ -170,8 +200,15 @@ COURT_LINES_TOGGLE_PROPERTY = "_Court_Lines_ON_OFF"
 # Patching these is if anything SAFER than the Material path: each value is a
 # bare 4 x float32 RGBA at a known file offset, so there's no reserialization at
 # all -- we overwrite 16 bytes in place and the file size cannot change.
-CONTAINER_ASSETS_FILE   = "sharedassets1.assets"
+CONTAINER_ASSETS_FILE   = "sharedassets1.assets"   # pre-2026-27 name; see apply_layout()
 CONTAINER_SCRIPT_CLASS  = "BasketTeamContainer"
+
+
+def apply_layout(layout):
+    """game_layout.configure() hook: the team containers moved to
+    sharedassets0.assets in the 2026-27 season update."""
+    global CONTAINER_ASSETS_FILE
+    CONTAINER_ASSETS_FILE = layout.get("containers_file", CONTAINER_ASSETS_FILE)
 CONTAINER_DEFAULT_VARIANT = "default"
 
 # IMPORTANT: these labels describe what each property was OBSERVED to colour
@@ -945,7 +982,7 @@ def _parse_material_profiles(raw, byte_start):
     return out
 
 def find_team_containers(game_data_path):
-    """Scan sharedassets1.assets for every BasketTeamContainer and return
+    """Scan the containers file for every BasketTeamContainer and return
     {container_name: {"assets_path", "path_id", "profiles"}}.
     Live scan, not hardcoded, so offsets stay correct after a game update."""
     assets_path = os.path.join(game_data_path, CONTAINER_ASSETS_FILE)
@@ -1265,11 +1302,31 @@ class ModManagerApp(tk.Tk):
         self.audio_frame       = None
         self.mesh_frame        = None
 
+        # Work out the game's file layout BEFORE building the tabs: several of
+        # them read game files as soon as they are created.
+        self.layout_status = {"state": "missing"}
+        self._quarantined  = []
+        self._unpacking    = False
+        self._prepare_layout()
+
+        boot_log("Building the window...")
+        # If building the window ever stalls, print where Python is stuck every
+        # 15 s (to this console). Costs nothing when it doesn't.
+        import faulthandler
+        try:
+            faulthandler.dump_traceback_later(15, repeat=True, file=sys.stderr)
+        except Exception:
+            pass
         self._apply_styles()
         self._build_ui()
+        try:
+            faulthandler.cancel_dump_traceback_later()
+        except Exception:
+            pass
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        if self.cfg["game_data_path"] and self.cfg["mods_folder"]:
-            self.after(200, self._load_textures_async)
+        self.after(300, self._startup_checks)
+        self.after(0, lambda: boot_log("Window ready. Loading textures in the background "
+                                       "(progress shows in the app's status bar)."))
 
     def _on_close(self):
         try:
@@ -1278,6 +1335,379 @@ class ModManagerApp(tk.Tk):
         except Exception:
             pass
         self.destroy()
+
+    # ── Game file layout (see modules/game_layout.py) ─────────────────────────
+    def _layout_modules(self):
+        """Modules to configure right now. Feature modules are NOT imported
+        here (Sliders and Floor Patterns load lazily, and importing them at
+        startup cost seconds); game_layout pushes the map into whichever are
+        already loaded and the rest pick it up via game_layout.attach()."""
+        return [sys.modules[__name__]]
+
+    def _prepare_layout(self, refresh=False):
+        """Read the layout state; when the game is ready, retire backups from
+        an older build and point every module at this build's files."""
+        gp = self.cfg.get("game_data_path", "")
+        self.layout_status = game_layout.status(gp) if gp else {"state": "missing", "message": ""}
+        if self.layout_status["state"] != "ready":
+            boot_log(f"Game files: {self.layout_status['state']}")
+            return
+        try:
+            self._quarantined += game_layout.check_build_stamp(gp)
+        except Exception as e:
+            print(f"Warning: backup check failed: {e}")
+        try:
+            boot_log("Reading the game's file layout (cached after the first run)...")
+            game_layout.configure(gp, *self._layout_modules(), refresh=refresh)
+        except Exception as e:
+            print(f"Warning: could not resolve the game's file layout: {e}")
+
+    def _startup_checks(self):
+        st = self.layout_status.get("state")
+        self._update_layout_banner()
+        if not self.cfg.get("game_data_path"):
+            return
+        if st in ("packed", "repacked"):
+            self.status_var.set("⚠ Game files need preparing before modding. See the Home tab.")
+            self._offer_unpack(startup=True)
+            return
+        if st != "ready":
+            self.status_var.set("❌ " + self.layout_status.get("message", "Game files not found."))
+            return
+        self._announce_quarantine()
+        self._check_mod_targets(then=self._load_textures_async)
+
+    def _announce_quarantine(self):
+        if not self._quarantined:
+            return
+        n = len(self._quarantined)
+        self._quarantined = []
+        messagebox.showinfo(
+            "Old backups set aside",
+            f"NBA Bounce has been updated since {n} backup file(s) were made.\n\n"
+            "Backups of an older game build must never be restored over the new "
+            f"one, so they were moved into '{game_layout.QUARANTINE_DIR}' inside "
+            "the game data folder. Nothing was deleted.\n\n"
+            "Your mods are still in your mods folder. Click ▶ Apply Mods to put "
+            "them back into the updated game.")
+
+    def _offer_unpack(self, startup=False):
+        gp = self.cfg.get("game_data_path", "")
+        st = game_layout.status(gp)
+        if st["state"] not in ("packed", "repacked"):
+            if not startup:
+                messagebox.showinfo("Game files", st.get("message", ""))
+            return
+        if not messagebox.askyesno(
+                "Prepare game for modding",
+                st["message"] + "\n\n"
+                "Prepare it now? The mod manager will:\n"
+                "  • unpack data.unity3d into regular game files (about 700 MB),\n"
+                "  • keep the original as data.unity3d.original_backup.\n\n"
+                "It takes about a minute. The game runs normally afterwards, and "
+                "Settings → Undo puts it back exactly as it was. After a game "
+                "update Steam re-packs the game, and you'll be asked again."):
+            return
+        self._run_unpack()
+
+    def _busy_dialog(self, title, text):
+        C = self.C
+        dlg = tk.Toplevel(self)
+        dlg.title(title)
+        dlg.configure(bg=C["bg"])
+        dlg.transient(self)
+        dlg.resizable(False, False)
+        dlg.protocol("WM_DELETE_WINDOW", lambda: None)   # can't cancel midway
+        msg = tk.StringVar(value=text)
+        tk.Label(dlg, textvariable=msg, bg=C["bg"], fg=C["text"], width=56,
+                 font=("Segoe UI", 10), justify="left", anchor="w").pack(padx=18, pady=(16, 8))
+        bar = ttk.Progressbar(dlg, mode="indeterminate", length=420)
+        bar.pack(padx=18, pady=(0, 18))
+        bar.start(12)
+        try:
+            dlg.grab_set()
+        except Exception:
+            pass
+        return dlg, msg
+
+    def _run_unpack(self):
+        if self._unpacking:
+            return
+        self._unpacking = True
+        gp = self.cfg.get("game_data_path", "")
+        dlg, msg = self._busy_dialog("Preparing game files",
+                                     "Unpacking data.unity3d … this takes about a minute.")
+
+        def progress(text):
+            self.after(0, msg.set, text)
+
+        def work():
+            try:
+                result, err = game_layout.unpack(gp, progress=progress), None
+            except Exception as e:
+                result, err = None, e
+            self.after(0, done, result, err)
+
+        def done(result, err):
+            self._unpacking = False
+            try:
+                dlg.grab_release()
+            except Exception:
+                pass
+            dlg.destroy()
+            if err is not None:
+                messagebox.showerror("Could not prepare the game",
+                                     f"{err}\n\nThe game files were not changed.")
+                self._update_layout_banner()
+                return
+            note = ""
+            if result["quarantined"]:
+                note = (f"\n\n{len(result['quarantined'])} backup(s) from the older "
+                        f"game build were moved into '{game_layout.QUARANTINE_DIR}'.")
+            messagebox.showinfo(
+                "Game ready for modding",
+                f"Unpacked {result['files']} game files.{note}\n\n"
+                "Next, the mod manager checks your queued mods against the "
+                "updated game. Then click ▶ Apply Mods to write them in.")
+            self._after_layout_change()
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _undo_unpack(self, parent=None):
+        gp = self.cfg.get("game_data_path", "")
+        if not game_layout.can_undo_unpack(gp):
+            messagebox.showinfo("Undo unpack",
+                                "This game folder was not unpacked by the mod manager, "
+                                "so there is nothing to undo.", parent=parent or self)
+            return
+        if not messagebox.askyesno(
+                "Undo unpack",
+                "Put data.unity3d back and delete the unpacked game files?\n\n"
+                "Every texture, audio, mesh, team and slider change written into "
+                "the game goes with them. Your mods folder is not touched, but "
+                "nothing can be modded again until you prepare the game again.",
+                parent=parent or self):
+            return
+        try:
+            game_layout.undo_unpack(gp)
+        except Exception as e:
+            messagebox.showerror("Undo unpack", str(e), parent=parent or self)
+            return
+        messagebox.showinfo("Undo unpack", "The game is back to its original packed "
+                            "files.", parent=parent or self)
+        self._after_layout_change()
+
+    def _after_layout_change(self):
+        """Re-resolve the layout and reload everything that read game files."""
+        self._prepare_layout(refresh=True)
+        self._update_layout_banner()
+        self._refresh_tabs_for_paths()
+        if self.layout_status.get("state") == "ready":
+            self._announce_quarantine()
+            self._check_mod_targets(then=self._load_textures_async)
+        else:
+            self.all_textures = []
+            self.tree.delete(*self.tree.get_children())
+            self.status_var.set("⚠ " + self.layout_status.get("message", ""))
+
+    def _refresh_tabs_for_paths(self):
+        """Tell every tab that the game folder (or its contents) changed."""
+        gp = self.cfg.get("game_data_path", "")
+        # Saves tab reads the unlockable catalog out of the game folder.
+        if getattr(self, "save_frame", None) is not None:
+            try:
+                self.save_frame.set_game_data_path(gp)
+            except Exception:
+                pass
+        # Teams tab was handed the game path when it was built.
+        if getattr(self, "team_frame", None) is not None:
+            try:
+                self.team_frame.set_game_path(gp)
+            except Exception:
+                pass
+        # Meshes tab keeps its own list and mesh_mods.json.
+        if getattr(self, "mesh_frame", None) is not None:
+            try:
+                self.mesh_frame.reload_config(self.cfg)
+            except Exception:
+                pass
+        # Audio scans lazily on first show; make it scan again next time.
+        if getattr(self, "audio_frame", None) is not None:
+            try:
+                self.audio_frame._loaded_once = False
+                self.audio_frame.all_clips = []
+            except Exception:
+                pass
+
+    # ── Queued mods follow their object across game updates ───────────────────
+    def _mod_stores(self):
+        """(label, type, load(), save(entries), make_key) for each mod list."""
+        folder = self.cfg.get("mods_folder", "")
+        stores = [("texture", "Texture2D",
+                   lambda: load_mods_meta(folder),
+                   lambda e: save_mods_meta(folder, e),
+                   lambda e: f"{os.path.basename(e['assets_file'])}::{e['path_id']}")]
+        try:
+            import mesh_manager as mm
+            stores.append(("mesh", "Mesh",
+                           lambda: mm.load_mesh_meta(folder),
+                           lambda e: mm.save_mesh_meta(folder, e),
+                           lambda e: mm.mesh_key(e["assets_file"], e["path_id"])))
+        except Exception:
+            pass
+        try:
+            import audio_manager as am
+            apath = os.path.join(folder, am.AUDIO_META_FILE)
+            stores.append(("audio", "AudioClip",
+                           lambda: am._load_json(apath, {}),
+                           lambda e: am._save_json(apath, e),
+                           lambda e: f"{os.path.basename(e['assets_file'])}::{e['path_id']}"))
+        except Exception:
+            pass
+        return stores
+
+    def _check_mod_targets(self, then=None):
+        """Make sure every queued mod still points at the object it was made
+        for. After a game update every path_id changes, so a saved mod would
+        otherwise be written into an unrelated texture, clip or mesh.
+        Matching runs in the background; the user confirms any change."""
+        gp, folder = self.cfg.get("game_data_path", ""), self.cfg.get("mods_folder", "")
+        if not gp or not folder or not os.path.isdir(folder):
+            if then:
+                then()
+            return
+        # Nothing to re-check when neither the game build nor any mod list
+        # changed since the last clean check -- it means opening every file a
+        # mod targets, which is most of a startup's disk reads.
+        sig = self._mod_check_signature(gp, folder)
+        if sig and sig == self._read_mod_check():
+            if then:
+                then()
+            return
+        self.status_var.set("Checking your queued mods against the game files…")
+        boot_log("Checking your queued mods against the game files...")
+
+        def work():
+            plans = []
+            for label, tname, load, save, key in self._mod_stores():
+                try:
+                    entries = load() or {}
+                    if not entries:
+                        continue
+                    new, moved, unresolved = game_layout.rematch_mods(gp, entries, tname, key)
+                    if moved or unresolved:
+                        plans.append((label, save, new, moved, unresolved))
+                except Exception as e:
+                    print(f"Warning: could not check {label} mods: {e}")
+            self.after(0, done, plans)
+
+        def done(plans):
+            if plans:
+                self._confirm_rematch(plans)
+            # Remember a clean result (or one the user just resolved) so the
+            # next start can skip the check; a declined update is asked again.
+            if not plans or getattr(self, "_rematch_saved", False):
+                self._write_mod_check(self._mod_check_signature(gp, folder))
+            if then:
+                then()
+
+        threading.Thread(target=work, daemon=True).start()
+
+    MOD_CHECK_FILE = app_paths.user("mod_check.json")
+
+    def _mod_check_signature(self, gp, folder):
+        parts = [game_layout.build_id(gp), os.path.normcase(os.path.abspath(gp))]
+        try:
+            import audio_manager as am
+            names = (MODS_META_FILE, "mesh_mods.json", am.AUDIO_META_FILE)
+        except Exception:
+            names = (MODS_META_FILE, "mesh_mods.json", "audio_mods.json")
+        for n in names:
+            p = os.path.join(folder, n)
+            try:
+                st = os.stat(p)
+                parts.append(f"{n}:{st.st_size}:{int(st.st_mtime)}")
+            except OSError:
+                parts.append(f"{n}:-")
+        return "|".join(parts)
+
+    def _read_mod_check(self):
+        try:
+            with open(self.MOD_CHECK_FILE, encoding="utf-8") as f:
+                return json.load(f).get("sig")
+        except Exception:
+            return None
+
+    def _write_mod_check(self, sig):
+        try:
+            with open(self.MOD_CHECK_FILE, "w", encoding="utf-8") as f:
+                json.dump({"sig": sig}, f)
+        except OSError:
+            pass
+
+    def _confirm_rematch(self, plans):
+        moved = [(lbl, m) for lbl, _s, _n, mv, _u in plans for m in mv]
+        unresolved = [(lbl, u) for lbl, _s, _n, _m, un in plans for u in un]
+        lines = []
+        if moved:
+            lines.append(f"{len(moved)} queued mod(s) point at objects that moved in "
+                         "this game build and were found again by name:")
+            lines += [f"  • {lbl}: {name}   ({old} → {new})"
+                      for lbl, (name, old, new) in moved[:10]]
+            if len(moved) > 10:
+                lines.append(f"  … +{len(moved) - 10} more")
+        if unresolved:
+            if lines:
+                lines.append("")
+            lines.append(f"{len(unresolved)} queued mod(s) could not be matched and "
+                         "will be skipped by Apply until you import them again:")
+            lines += [f"  • {lbl}: {name} ({why})" for lbl, (name, why) in unresolved[:10]]
+            if len(unresolved) > 10:
+                lines.append(f"  … +{len(unresolved) - 10} more")
+        if moved:
+            ok = messagebox.askyesno(
+                "Update your mod list?",
+                "\n".join(lines) + "\n\nUpdate your mod list to the new locations?\n"
+                "(If you say No, those mods are skipped by Apply, never written "
+                "into the wrong object.)")
+        else:
+            messagebox.showwarning("Some mods need attention", "\n".join(lines))
+            ok = False
+        self._rematch_saved = bool(ok and not unresolved)
+        if ok:
+            for _label, save, new, mv, _u in plans:
+                if mv:
+                    save(new)
+        # Reload every list from disk, changed or not.
+        self.mods_meta = load_mods_meta(self.cfg.get("mods_folder", ""))
+        if self.mesh_frame is not None:
+            try:
+                self.mesh_frame.reload_config(self.cfg)
+            except Exception:
+                pass
+        if self.audio_frame is not None:
+            try:
+                import audio_manager as am
+                self.audio_frame.audio_mods = am._load_json(
+                    os.path.join(self.cfg.get("mods_folder", ""), am.AUDIO_META_FILE), {})
+            except Exception:
+                pass
+
+    def _update_layout_banner(self):
+        """Home-tab line saying whether the game is ready for modding."""
+        bar = getattr(self, "layout_banner", None)
+        if bar is None:
+            return
+        st = self.layout_status.get("state")
+        if not self.cfg.get("game_data_path") or st == "ready":
+            bar.grid_remove()
+            return
+        self.layout_banner_text.set(self.layout_status.get("message", ""))
+        if st in ("packed", "repacked"):
+            self.layout_banner_btn.pack(side="right", padx=(10, 12), pady=8)
+        else:
+            self.layout_banner_btn.pack_forget()
+        bar.grid()
 
     # ── Styles ────────────────────────────────────────────────────────────────
     def _apply_styles(self):
@@ -1329,11 +1759,17 @@ class ModManagerApp(tk.Tk):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True, padx=8, pady=8)
 
-        self._build_home_tab(self.notebook)
-        self._build_textures_tab(self.notebook)
-        self._build_audio_tab(self.notebook)
-        self._build_meshes_tab(self.notebook)
-        self._build_teams_tab(self.notebook)
+        # Each tab is timed: any that takes noticeably long is named in the
+        # console, so a slow start can be traced to the exact tab.
+        for label, build in (("Home", self._build_home_tab),
+                             ("Textures", self._build_textures_tab),
+                             ("Audio", self._build_audio_tab),
+                             ("Meshes", self._build_meshes_tab),
+                             ("Teams", self._build_teams_tab)):
+            t = time.time()
+            build(self.notebook)
+            if time.time() - t > 0.5:
+                boot_log(f"  {label} tab took {time.time() - t:.1f}s")
         self.floor_patterns_tab = self._build_tool_tab(
             self.notebook, "🪵 Floor Patterns", "🪵", "Floor Patterns",
             "Pick a wood-grain pattern for each team's court, throwback eras included.",
@@ -1535,10 +1971,14 @@ class ModManagerApp(tk.Tk):
             pass
         applied, errors = 0, []
         ress_reset = set()
+        wrong = set(game_layout.mismatched_mods(self.mods_meta, "Texture2D"))
         for key, mod in self.mods_meta.items():
             af, png, pid = mod["assets_file"], mod["png_path"], mod["path_id"]
             if not os.path.exists(af) or not os.path.exists(png):
                 errors.append(f"{mod.get('name', key)}: source file missing")
+                continue
+            if key in wrong and not (pid >= 91000000 and not mod_targets_exist(af, [pid])):
+                errors.append(f"{mod.get('name', key)}: target texture changed; skipped")
                 continue
             if pid >= 91000000 and not mod_targets_exist(af, [pid]):
                 # An app-created object that has since been removed. Skipping is
@@ -1554,6 +1994,9 @@ class ModManagerApp(tk.Tk):
                     pass          # cosmetic; never worth failing a re-apply over
             except Exception as e:
                 errors.append(f"{mod.get('name', key)}: {e}")
+        n, notes = self._reapply_floor_slots(ress_reset)
+        applied += n
+        errors += [n_ for n_ in notes if not n_.startswith("Floor patterns were undone")]
         if self.mesh_frame is not None and self._mesh_mod_count():
             try:
                 m_applied, m_errors, _w = self.mesh_frame.apply_all(
@@ -1568,10 +2011,14 @@ class ModManagerApp(tk.Tk):
         audio_mods = getattr(self.audio_frame, "audio_mods", None) or {}
         if audio_mods:
             from audio_manager import apply_audio_replacement, ensure_audio_backup
+            wrong = set(game_layout.mismatched_mods(audio_mods, "AudioClip"))
             for key, mod in audio_mods.items():
                 af, wav = mod.get("assets_file"), mod.get("audio_path")
                 if not (af and wav and os.path.exists(af) and os.path.exists(wav)):
                     errors.append(f"{mod.get('name', key)}: source file missing")
+                    continue
+                if key in wrong:
+                    errors.append(f"{mod.get('name', key)}: target clip changed; skipped")
                     continue
                 try:
                     ensure_audio_backup(af)
@@ -1584,6 +2031,17 @@ class ModManagerApp(tk.Tk):
                                + ("" if len(errors) <= 4
                                   else f" (+{len(errors) - 4} more)"))
         return applied
+
+    def _reapply_floor_slots(self, ress_reset):
+        """Floor Patterns' own slot textures (2026-27 build onward) keep their
+        pixels at the end of the court file's .resS, like texture mods, so every
+        apply run that may have rewound that .resS writes them again."""
+        try:
+            import floor_patterns
+            return floor_patterns.reapply_slot_pixels(
+                self.cfg.get("game_data_path", ""), ress_reset)
+        except Exception as e:
+            return 0, [f"Floor patterns: {e}"]
 
     def save_cfg(self):
         """Persist self.cfg. For tabs that keep a setting of their own (the
@@ -1641,8 +2099,19 @@ class ModManagerApp(tk.Tk):
                  bg=C["bg"], fg=C["sub"], font=("Segoe UI", 10), justify="center"
                  ).grid(row=1, column=0, pady=(0, 26))
 
+        # Shown only when the game isn't ready to mod (packed by an update).
+        self.layout_banner = tk.Frame(tab, bg="#FDB927")   # fixed gold: dark text on it in both themes
+        self.layout_banner.grid(row=2, column=0, sticky="ew", padx=40, pady=(0, 18))
+        self.layout_banner_text = tk.StringVar()
+        tk.Label(self.layout_banner, textvariable=self.layout_banner_text, bg="#FDB927",
+                 fg="#1A1A1A", font=("Segoe UI", 10, "bold"), wraplength=640,
+                 justify="left").pack(side="left", padx=12, pady=8)
+        self.layout_banner_btn = ttk.Button(self.layout_banner, text="Prepare Game for Modding",
+                                            style="Accent.TButton", command=self._offer_unpack)
+        self.layout_banner.grid_remove()
+
         cards = tk.Frame(tab, bg=C["bg"])
-        cards.grid(row=2, column=0)
+        cards.grid(row=3, column=0)
         card_defs = [
             ("🖼", "Textures", "Browse, preview, export, and replace in-game textures.",
              lambda: self._goto_tab(self.textures_tab)),
@@ -1828,7 +2297,7 @@ class ModManagerApp(tk.Tk):
     def _open_settings(self):
         C = self.C
         dlg = tk.Toplevel(self); dlg.title("Settings")
-        dlg.geometry("560x300"); dlg.configure(bg=C["bg"]); dlg.grab_set()
+        dlg.geometry("600x400"); dlg.configure(bg=C["bg"]); dlg.grab_set()
 
         def row(label, var, fn, r):
             ttk.Label(dlg, text=label).grid(row=r, column=0, sticky="w", padx=12, pady=8)
@@ -1850,6 +2319,22 @@ class ModManagerApp(tk.Tk):
         ttk.Label(dlg, text="Changing this takes effect the next time you launch the app.",
                   style="Sub.TLabel", background=C["bg"]).grid(row=4, column=0, columnspan=3, sticky="w", padx=12)
 
+        # Game files: since the 2026-27 season update NBA Bounce ships packed
+        # (data.unity3d) and has to be unpacked once before anything can be
+        # modded. See modules/game_layout.py.
+        ttk.Label(dlg, text="Game Files:").grid(row=5, column=0, sticky="w", padx=12, pady=(18, 4))
+        gf = tk.Frame(dlg, bg=C["bg"]); gf.grid(row=5, column=1, columnspan=2, sticky="w", padx=4, pady=(18, 4))
+        state_txt = {"ready": "Ready for modding", "packed": "Packed — needs preparing",
+                     "repacked": "Re-packed by a game update — needs preparing again",
+                     "missing": "Not found"}
+        st = game_layout.status(self.cfg.get("game_data_path", "")).get("state", "missing")
+        tk.Label(gf, text=state_txt.get(st, st), bg=C["bg"], fg=C["text"],
+                 font=("Segoe UI", 9)).pack(side="left", padx=(0, 10))
+        ttk.Button(gf, text="Prepare for Modding", style="Soft.TButton",
+                   command=lambda: (dlg.destroy(), self._offer_unpack())).pack(side="left", padx=2)
+        ttk.Button(gf, text="Undo", style="Soft.TButton",
+                   command=lambda: (dlg.destroy(), self._undo_unpack())).pack(side="left", padx=2)
+
         def save():
             self.cfg["game_data_path"] = gv.get()
             self.cfg["mods_folder"]    = mv.get()
@@ -1857,31 +2342,15 @@ class ModManagerApp(tk.Tk):
             save_config(self.cfg)
             os.makedirs(self.cfg["mods_folder"], exist_ok=True)
             self.mods_meta = load_mods_meta(self.cfg["mods_folder"])
-            # Saves tab reads the unlockable catalog out of the game folder, so
-            # it needs to hear about a game-path change too.
-            if getattr(self, "save_frame", None) is not None:
-                try:
-                    self.save_frame.set_game_data_path(self.cfg["game_data_path"])
-                except Exception:
-                    pass
-            # Teams tab was handed the game path when it was built, so it is
-            # still holding the old one (an empty string on a fresh install)
-            # until it is told otherwise.
-            if getattr(self, "team_frame", None) is not None:
-                try:
-                    self.team_frame.set_game_path(self.cfg["game_data_path"])
-                except Exception:
-                    pass
-            # Meshes tab keeps its own list and mesh_mods.json, both of which are
-            # tied to the two folders that just changed.
-            if getattr(self, "mesh_frame", None) is not None:
-                try:
-                    self.mesh_frame.reload_config(self.cfg)
-                except Exception:
-                    pass
-            dlg.destroy(); self._load_textures_async()
+            dlg.destroy()
+            # Re-read the layout for the (possibly new) folder, tell every tab,
+            # re-check queued mods, then reload textures -- or offer to prepare
+            # a packed game.
+            self._after_layout_change()
+            if self.layout_status.get("state") in ("packed", "repacked"):
+                self._offer_unpack(startup=True)
 
-        ttk.Button(dlg, text="Save & Reload", style="Accent.TButton", command=save).grid(row=5, column=0, columnspan=3, pady=16)
+        ttk.Button(dlg, text="Save & Reload", style="Accent.TButton", command=save).grid(row=6, column=0, columnspan=3, pady=16)
 
     # ── Loading ───────────────────────────────────────────────────────────────
     def _load_textures_async(self):
@@ -1912,7 +2381,10 @@ class ModManagerApp(tk.Tk):
                            self.status_var.set(f"Scanning {f}  ({n}/{t})…"))
                 try:
                     found = extract_textures_from_file(af)
-                    all_textures.extend(found)
+                    # Floor Patterns' slot textures are managed by that tool;
+                    # replacing one here would fight it on every Apply.
+                    all_textures.extend(t for t in found
+                                        if not str(t.get("name", "")).startswith("FLOORSLOT_"))
                 except Exception as e:
                     print(f"Warning: could not read {af}: {e}")
 
@@ -1933,6 +2405,7 @@ class ModManagerApp(tk.Tk):
         self._populate_tree(self.all_textures)
         n = len(find_assets_files(self.cfg["game_data_path"]))
         self.status_var.set(f"✅ Loaded {len(self.all_textures)} textures from {n} asset files.")
+        boot_log(f"Loaded {len(self.all_textures)} textures from {n} asset files. All set.")
 
     def _sort_by(self, col):
         if self._sort_col == col:
@@ -2207,6 +2680,9 @@ class ModManagerApp(tk.Tk):
         rewind the .resS out from under the other kind's offsets, leaving those
         objects pointing at bytes that are no longer there.
         """
+        gp = self.cfg.get("game_data_path", "")
+        if game_layout.status(gp).get("state") in ("packed", "repacked"):
+            self._offer_unpack(); return
         # Mods for CUSTOM_* art whose team has since been removed point at
         # objects that no longer exist; drop them instead of failing on them.
         created = {m["assets_file"] for m in self.mods_meta.values()
@@ -2241,10 +2717,16 @@ class ModManagerApp(tk.Tk):
         # Shared across the whole run: each .resS may only be rewound once, or
         # earlier mods in the same file lose their appended pixel bytes.
         ress_reset = set()
+        # Never write into an object that isn't the one the mod was made for --
+        # after a game update a saved path_id can name an unrelated texture.
+        wrong = set(game_layout.mismatched_mods(self.mods_meta, "Texture2D"))
         for key, mod in self.mods_meta.items():
             af, png, pid = mod["assets_file"], mod["png_path"], mod["path_id"]
             if not os.path.exists(af):  errors.append(f"File not found: {af}"); continue
             if not os.path.exists(png): errors.append(f"Mod PNG missing: {png}"); continue
+            if key in wrong:
+                errors.append(f"{mod['name']}: skipped -- that texture isn't where this "
+                              f"mod expects it (game updated?). Re-import it."); continue
             if ensure_backup(af): backed_up.append(os.path.basename(af))
             try:
                 apply_single_mod(af, pid, png, ress_reset=ress_reset); applied += 1
@@ -2261,6 +2743,11 @@ class ModManagerApp(tk.Tk):
             except Exception as e:
                 warnings.append(f"{mod['name']}: sprite crop not repaired ({e})")
 
+        # Floor-pattern slot textures stream from the same .resS, which this run
+        # may just have rewound -- write their pixels again in the same pass.
+        floor_n, floor_notes = self._reapply_floor_slots(ress_reset)
+        warnings += floor_notes
+
         # Meshes second, sharing ress_reset so both kinds of mod end up in the
         # same .resS pass (see the docstring).
         mesh_applied, mesh_notes = 0, []
@@ -2274,6 +2761,7 @@ class ModManagerApp(tk.Tk):
 
         msg = f"✅ Applied {applied}/{count} texture mods."
         if mesh_count: msg = msg[:-1] + f" and {mesh_applied}/{mesh_count} mesh mods."
+        if floor_n: msg += f" Re-wrote {floor_n} floor pattern slot(s)."
         if uncropped: msg += f" Un-cropped {uncropped} sprite(s)."
         if backed_up: msg += f" Backed up: {', '.join(backed_up)}."
         if errors:
@@ -2281,7 +2769,7 @@ class ModManagerApp(tk.Tk):
             messagebox.showwarning("Some mods failed", "\n".join(errors))
         if warnings:
             msg += f" ⚠ {len(warnings)} warning(s)."
-            messagebox.showwarning("Sprite crop notes", "\n\n".join(warnings))
+            messagebox.showwarning("Notes", "\n\n".join(warnings))
         if mesh_notes:
             messagebox.showinfo("Mesh notes", "\n\n".join(mesh_notes))
         self.status_var.set(msg)
@@ -2290,6 +2778,10 @@ class ModManagerApp(tk.Tk):
         gp = self.cfg.get("game_data_path","")
         if not gp:
             messagebox.showwarning("No game path", "Set your game data folder in Settings first."); return
+        if game_layout.status(gp).get("state") != "ready":
+            messagebox.showinfo("Restore Game Files",
+                                "The game files aren't unpacked, so there is nothing of "
+                                "the mod manager's to restore."); return
         restorable = [f for f in find_assets_files(gp) if os.path.exists(f+BACKUP_SUFFIX)]
         if not restorable:
             messagebox.showinfo("No backups", "No backup files found. Have you applied any mods?"); return
@@ -3062,4 +3554,6 @@ class ModManagerApp(tk.Tk):
 
 if __name__ == "__main__":
     app = ModManagerApp()
+    boot_log(f"Started in {time.time() - _BOOT_T0:.1f}s. Leave this window open; "
+             f"closing it closes the app.")
     app.mainloop()

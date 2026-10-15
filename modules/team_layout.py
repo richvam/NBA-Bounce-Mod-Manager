@@ -9,8 +9,8 @@ app.py or calls apply_single_mod().
 
 WHAT EACH CONTROL TOUCHES
 -------------------------
-    Position        level2, in place (the GridLayOut strip)       asset edit
-    Team order      level1, in place (m_aoBundledTeams)           asset edit
+    Position        grid scene, in place (the GridLayOut strip)   asset edit
+    Team order      team scene, in place (m_aoBundledTeams)       asset edit
                     + the grid's nickname sort switched off        CODE edit
     Columns         Assembly-CSharp.dll, same-length byte swaps    CODE edit
     Reset           every team file back to stock, save repaired
@@ -616,9 +616,9 @@ class LayoutPanel(tk.Frame):
         ch = self._changes()
         lines = []
         if ch.get("position"):
-            lines.append("• Move the grid (level2)")
+            lines.append(f"• Move the grid ({tmgr.GRID_SCENE_FILE})")
         if ch.get("order"):
-            lines.append("• New team order (level1)")
+            lines.append(f"• New team order ({tmgr.MANAGER_SCENE_FILE})")
         if ch.get("code"):
             code = self._code() or {"columns": tmgr.STOCK_COLUMNS}
             for k, n in self.pending["columns"].items():

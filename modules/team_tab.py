@@ -416,6 +416,8 @@ class TeamTab(tk.Frame):
             self._set_status("Loaded.", OK_GREEN)
             self._refresh_advanced()
             self._refresh_layout()
+            if res.get("gaps"):
+                self.after(100, lambda: self._offer_sync(res["gaps"]))
 
         def work():
             res = tmgr.list_teams(self.game_data)
@@ -427,9 +429,44 @@ class TeamTab(tk.Frame):
                 res["localized"] = tmgr.localized_abbreviations(self.game_data)
             except Exception:
                 res["localized"] = set()
+            try:
+                res["gaps"] = tmgr.team_scene_gaps(self.game_data)
+            except Exception:
+                res["gaps"] = {}
             return res
 
         self._run(work, done, "Scanning teams …")
+
+    def _offer_sync(self, gaps):
+        """Added teams missing from a scene's team list -- what made teams added
+        on the 2026-27 build (which reads level0's list) never appear."""
+        if self.busy:                 # the layout read that load() kicks off
+            self.after(500, lambda: self._offer_sync(gaps))
+            return
+        names = {t["path_id"]: t["name"].strip() for t in self.teams}
+        missing = sorted({p for ps in gaps.values() for p in ps})
+        listing = "\n".join(f"  • {names.get(p, p)}" for p in missing[:12])
+        if not messagebox.askyesno(
+                "Added teams aren't in the game yet",
+                f"These added teams exist but are missing from the team list "
+                f"the game reads at startup ({', '.join(sorted(gaps))}), so they "
+                f"don't appear on the team-select screen:\n\n{listing}\n\n"
+                "Add them to that list now? The file is backed up first, and "
+                "your queued mods are re-applied afterwards."):
+            self._set_status("Added teams are missing from the game's team list "
+                             "-- press Refresh to fix.", self.T["gold"])
+            return
+
+        def done(res, err):
+            if err:
+                messagebox.showerror("Could not update the team list", str(err))
+                return
+            self._after_rebuild({"rebuilt": res})
+
+        self._run(lambda: tmgr.sync_team_scenes(
+            self.game_data,
+            progress=lambda m: self.after(0, lambda: self._set_status(m))),
+            done, "Adding teams to the game's team list …")
 
     def _refresh_advanced(self):
         """Only meaningful while the Advanced window is open; the values are
@@ -643,7 +680,7 @@ class TeamTab(tk.Frame):
         want_res = tk.BooleanVar(value=True)
         for var, label, detail in (
                 (want_logos, "Logos and grid icon",
-                 "Pointer copies inside sharedassets1.assets."),
+                 "Pointer copies inside the team containers file."),
                 (want_res, "Jerseys, court and boards",
                  "Copies into resources.assets plus new entries in the "
                  "resource table, so Resources.Load can find them.")):

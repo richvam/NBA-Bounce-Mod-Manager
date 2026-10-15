@@ -81,6 +81,7 @@ CATEGORIES = [
     ("Trails", "TRAIL_"),
     ("Achievements", "ACH_"),
     ("DLC", "DLC_"),
+    ("GOAT", "GOAT_"),
 ]
 
 
@@ -320,9 +321,17 @@ class SaveTab(ttk.Frame):
 
     def _populate(self):
         self.tree.delete(*self.tree.get_children())
-        owned = set(self.current.get("main", []))
-        cat = self.catalog.get("main", [])
-        ids = list(dict.fromkeys(list(cat) + sorted(owned - set(cat))))
+        # Main unlockables and the GOAT (Mountain) ones live in two different
+        # arrays in the save, but one list is easier to browse; GOAT_ ids are
+        # routed to their own array when written.
+        owned_main = set(self.current.get("main", []))
+        owned_goat = set(self.current.get("goat", []))
+        owned = owned_main | owned_goat
+        cat_main = self.catalog.get("main", [])
+        cat_goat = self.catalog.get("goat", [])
+        cat = list(cat_main) + list(cat_goat)
+        ids = list(dict.fromkeys(list(cat_main) + sorted(owned_main - set(cat_main))
+                                 + list(cat_goat) + sorted(owned_goat - set(cat_goat))))
 
         pref = dict(CATEGORIES).get(self.cat_var.get())
         q = self.search_var.get().strip().upper()
@@ -340,7 +349,7 @@ class SaveTab(ttk.Frame):
         if cat:
             self.summary_var.set(
                 f"{len(owned)} unlocked • {len(cat)} available in this game build "
-                f"• {shown} shown"
+                f"({len(cat_goat)} GOAT) • {shown} shown"
                 + (f"  • {len(owned - set(cat))} runtime-generated item(s) kept as-is"
                    if owned - set(cat) else ""))
         elif owned:
@@ -370,13 +379,15 @@ class SaveTab(ttk.Frame):
         if not path:
             return
         n = len(self.catalog["main"])
+        g = len(self.catalog.get("goat") or [])
         if not messagebox.askyesno(
                 "Unlock everything?",
-                f"Unlock all {n} items available in this game build?\n\n"
+                f"Unlock all {n} items available in this game build"
+                + (f", plus {g} GOAT (Mountain) items" if g else "") + "?\n\n"
                 f"Your save is backed up first, and nothing you already own is "
                 f"removed.\n\n{sm.STEAM_CLOUD_WARNING.splitlines()[0]}"):
             return
-        self._apply(path, None)
+        self._apply(path, None, include_goat=True)
 
     def _unlock_selected(self):
         path = self._guard()
@@ -387,11 +398,13 @@ class SaveTab(ttk.Frame):
             messagebox.showinfo("Nothing selected",
                                 "Select one or more rows in the list first.")
             return
+        goat_picks = [i for i in picks if i.startswith("GOAT_")]
+        main_picks = [i for i in picks if not i.startswith("GOAT_")]
         keep = set(self.current.get("main", []))
-        ids = list(dict.fromkeys(list(keep) + picks))
-        self._apply(path, ids)
+        ids = list(dict.fromkeys(list(keep) + main_picks))
+        self._apply(path, ids, goat_ids=goat_picks or None)
 
-    def _apply(self, path, ids):
+    def _apply(self, path, ids, include_goat=False, goat_ids=None):
         self._busy = True
         self.btn_all.state(["disabled"]); self.btn_sel.state(["disabled"])
         self._status("Backing up and writing save…")
@@ -399,7 +412,8 @@ class SaveTab(ttk.Frame):
         def work():
             try:
                 bk = sm.backup_save(path)
-                info = sm.build_unlocked(path, path, self.catalog, ids=ids)
+                info = sm.build_unlocked(path, path, self.catalog, ids=ids,
+                                         include_goat=include_goat, goat_ids=goat_ids)
                 self.after(0, lambda: self._apply_done(info, bk, None))
             except Exception as e:
                 self.after(0, lambda e=e: self._apply_done(None, None, e))
@@ -414,12 +428,16 @@ class SaveTab(ttk.Frame):
             messagebox.showerror("Save not modified",
                                  f"{err}\n\nYour save was left untouched.")
             return
-        self._status(f"✅ Unlocks {info['main_before']} → {info['main_after']}. "
+        goat = (f", GOAT {info['goat_before']} → {info['goat_after']}"
+                if info["goat_after"] != info["goat_before"] else "")
+        self._status(f"✅ Unlocks {info['main_before']} → {info['main_after']}{goat}. "
                      f"Backup: {os.path.basename(backup)}")
         self._load_current()
         messagebox.showinfo(
             "Save updated",
             f"Unlockables: {info['main_before']} → {info['main_after']}\n"
+            + (f"GOAT unlockables: {info['goat_before']} → {info['goat_after']}\n"
+               if info["goat_after"] != info["goat_before"] else "") +
             f"Validated {info['objects']:,} objects, no id collisions.\n\n"
             f"Backup saved to:\n{backup}\n\n"
             f"Start Steam and launch the game to check. If a Steam Cloud "
