@@ -22,11 +22,13 @@ samples _Texture_Parquet at
     uv = world_xz * _Tiling_Parquet + _Offset_Parquet
 
 so pointing both materials at one big texture, with a tiling that makes one
-tile span the court, puts a whole picture on the floor. _ONLY_PARQUET = 1
-drops the apron/key colour zones the shader would paint over it, and
-_Court_Lines_ON_OFF = 0 on the lines material makes the line meshes sample the
-same picture, so the game's own lines vanish into it. The playing court
-(courtLines mesh) is 28.8 x 15.4 m.
+tile span the court, puts a whole picture on the floor. The shader also paints
+three vertex-colour zones (apron, keys, court) in flat colours; with
+_GOAT_Textures_ON_OFF = 1 they become texture x colour instead, so white zone
+colours let the picture through (see ZONE_PARAMS). _Court_Lines_ON_OFF = 0 on
+the lines material makes the line meshes sample the same picture, so the
+game's own lines vanish into it. The playing court (courtLines mesh) is
+28.8 x 15.4 m.
 
 
 ONE COURT PER LOGO VARIANT
@@ -70,6 +72,9 @@ WRITES
   shared scene material at match load. Replacing (or blanking) the logo
   textures of a variant changes its centre logo -- and the same logo in the
   team-select panel and on the scoreboard.
+* The baseline text is a 2048x256 strip per variant (txt_bounce_court_*_D in
+  resources.assets), loaded by name into the letters and decorations
+  materials. It's rebuilt from the text painted in the picture's apron.
 """
 
 import os, sys, json, math, struct, shutil, copy, ntpath
@@ -112,12 +117,22 @@ MAX_ROWS = 8
 # past each baseline, 1.9 m past each sideline.
 TEMPLATE_SPAN = (38.4, 19.2)
 CENTRE_CIRCLE_M = 1.83
+DECAL_CIRCLE_FRACTION = 1 / 3.16    # centre circle / centre-logo decal width, measured in game
 
 # eCourtMaterialParts
 PART_PARQUET, PART_LINES = 1, 2
 OFFSET_PARAM, TILING_PARAM = "_Offset_Parquet", "_Tiling_Parquet"
 
 LOGO_MODES = ("replace", "hide", "keep")
+# Baseline text: the team-name strip the game draws on the apron
+# (txt_bounce_court_<Team>_D[_retroLogo_n_team_m] in resources.assets, loaded by
+# name into the letters material, one per court variant).
+STRIP_MODES = ("picture", "none", "keep")
+STRIP_FILE = "resources.assets"
+STRIP_PREFIX = "txt_bounce_court_"
+STRIP_SIZE = (2048, 256)
+STRIP_BIG = (0, 0, 1580, 256)          # the long team name
+STRIP_SMALL = (1600, 0, 2040, 118)     # the stacked name above the NBA logo
 LOGO_SOURCES = ("court", "file")
 
 DXT1_2048x1024 = 1398120
@@ -230,18 +245,39 @@ def make_template(size=(TEX_W, TEX_H)):
     return img
 
 
+def _longest_run(idx, gap=6):
+    """(first, last) of the longest run of indices with no hole wider than
+    `gap` -- so a stray wood-coloured column at the image edge is ignored."""
+    best, start, prev = (int(idx[0]), int(idx[0])), int(idx[0]), int(idx[0])
+    for i in idx[1:]:
+        i = int(i)
+        if i - prev > gap:
+            start = i
+        prev = i
+        if prev - start > best[1] - best[0]:
+            best = (start, prev)
+    return best
+
+
 def detect_court_rect(img):
     """Find the playing court in an arbitrary court image: the bounding box of
     the hardwood, +/- 2 px for the boundary line. Falls back to the template's
     geometry (scaled) when there's no clear wood rectangle."""
     a = np.asarray(img.convert("RGB")).astype(np.int16)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    wood = (r > 180) & (g > 140) & (b > 100) & (b < 200) & (r - b > 40)
+    # Light maple through darker parquet: warm, fairly bright, not saturated red.
+    wood = (r > 150) & (g > 95) & (b < 200) & (r - b > 40) & (r - g < 90) & (g - b > 20)
     h, w = wood.shape
-    rows = np.where(wood.mean(axis=1) >= 0.30)[0]
+    # Columns first, then rows measured only across the court's columns, so
+    # the rows through the keys and centre logo still count as court.
     cols = np.where(wood.mean(axis=0) >= 0.30)[0]
+    if len(cols) >= w * 0.3:
+        x0, x1 = _longest_run(cols)
+        rows = np.where(wood[:, x0:x1 + 1].mean(axis=1) >= 0.30)[0]
+    else:
+        rows = []
     if len(rows) >= h * 0.3 and len(cols) >= w * 0.3:
-        x0, x1, y0, y1 = int(cols[0]), int(cols[-1]), int(rows[0]), int(rows[-1])
+        y0, y1 = _longest_run(rows)
         # Grow out across the boundary line: rows/columns that are mostly
         # bright paint (any colour, as long as it isn't the wood).
         line = (a.min(axis=2) > 170) & ~wood
@@ -293,6 +329,74 @@ def cut_centre_logo(img, rect, scale=1.0):
     a = np.asarray(crop).copy()
     a[..., 3] = (a[..., 3] * (alpha / 255)).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
+
+
+def extract_baseline_text(img, rect):
+    """The text painted in the apron past the left baseline of a court image,
+    keyed off the apron colour and turned to read left to right. RGBA, or
+    None when there's nothing there."""
+    a = np.asarray(img.convert("RGB")).astype(np.int16)
+    x0, y0, x1, y1 = (int(v) for v in rect)
+    right = x0 - 8
+    if right < 12:
+        return None
+    band = a[y0:y1, :right]
+    bg = np.median(band.reshape(-1, 3), axis=0)
+    dist = np.abs(band - bg).max(axis=2)
+    ink = dist > 60
+    frac = ink.mean(axis=0)
+    # Nearest run of inked columns to the court, ending at a clear gap (so
+    # bench boxes and other apron furniture further out are left behind).
+    cols, gap, started = [], 0, False
+    for x in range(right - 1, -1, -1):
+        if frac[x] > 0.05:
+            cols.append(x)
+            started, gap = True, 0
+        elif started:
+            gap += 1
+            if gap >= 8:
+                break
+    if len(cols) < 6:
+        return None
+    cx0, cx1 = min(cols), max(cols)
+    # Rows with real ink (3+ px), longest run: drops tick marks at the ends.
+    rows = np.where(ink[:, cx0:cx1 + 1].sum(axis=1) >= 3)[0]
+    if len(rows) < 20:
+        return None
+    ry0, ry1 = _longest_run(rows, gap=120)
+    crop = a[y0 + ry0:y0 + ry1 + 1, cx0:cx1 + 1].astype(np.uint8)
+    d = dist[ry0:ry1 + 1, cx0:cx1 + 1]
+    alpha = (np.clip((d - 35) / 50.0, 0, 1) * 255).astype(np.uint8)
+    rgba = np.dstack([crop, alpha])
+    # Left-apron text reads bottom to top; a clockwise turn lays it flat.
+    return Image.fromarray(rgba, "RGBA").rotate(-90, expand=True)
+
+
+def build_strip(text_img, original=None):
+    """A 2048x256 baseline strip: the text across the long name area and,
+    smaller, above the NBA logo, which is kept from the original strip."""
+    strip = Image.new("RGBA", STRIP_SIZE, (0, 0, 0, 0))
+    if original is not None:
+        keep = original.convert("RGBA").resize(STRIP_SIZE)
+        strip.paste(keep.crop((STRIP_SMALL[0] + 40, STRIP_SMALL[3], 2048, 256)),
+                    (STRIP_SMALL[0] + 40, STRIP_SMALL[3]))
+    if text_img is not None:
+        for box, pad in ((STRIP_BIG, 14), (STRIP_SMALL, 6)):
+            w, h = box[2] - box[0] - 2 * pad, box[3] - box[1] - 2 * pad
+            k = min(w / text_img.width, h / text_img.height)
+            t = text_img.resize((max(1, round(text_img.width * k)),
+                                 max(1, round(text_img.height * k))), Image.LANCZOS)
+            strip.alpha_composite(t, (box[0] + (box[2] - box[0] - t.width) // 2,
+                                      box[1] + (box[3] - box[1] - t.height) // 2))
+    return strip
+
+
+def strip_variant(name):
+    """Variant key a txt_bounce_court_* texture belongs to ("default" for the
+    plain one)."""
+    import re
+    m = re.search(r"[Ll]ogo_?(\d+)_?team_?(\d+)", name)
+    return f"LOGO_{m.group(1)}_TEAM_{m.group(2)}" if m else "default"
 
 
 def fit_logo(img, size):
@@ -539,6 +643,10 @@ def discover(game_path):
     courts, tex_users = {}, {}
     for cname, c in sorted(containers.items()):
         raw = c["raw"]
+        # GOAT-mode teams borrow an NBA team's court materials; their logos
+        # and colour data are their own business.
+        if "goat" in cname.lower():
+            continue
         ptr_names = [nm for _o, _p, t, nm in tm._pointers(raw, catalog) if t == "Material"]
         parquet = next((n for n in ptr_names if n.startswith(PARQUET)), None)
         lines = next((n for n in ptr_names if n.startswith(LINES)), None)
@@ -551,7 +659,14 @@ def discover(game_path):
             "variants": ["default"], "labels": {}, "logos": {},
             "materials": {"parquet": materials[parquet],
                           "lines": materials.get(LINES + token, materials[lines])},
-            "slot_pid": slots.get(SLOT_PREFIX + token), "shared_logos": []})
+            "slot_pid": slots.get(SLOT_PREFIX + token), "shared_logos": [],
+            "white_pid": slots.get(WHITE_SLOT),
+            "strips": {}})
+        for _o, text, *_rest in tm._strings_with_fit(raw):
+            if text.startswith(STRIP_PREFIX):
+                lst = entry["strips"].setdefault(strip_variant(text), [])
+                if text not in lst:
+                    lst.append(text)
         entry["containers"].append({"name": cname, "path_id": c["path_id"],
                                     "byte_start": c["byte_start"],
                                     "has_profiles": prof is not None})
@@ -680,6 +795,29 @@ def build_atlas(images, rows):
     return atlas
 
 
+def variant_picture(cfg, variant):
+    """The picture config a variant shows: its own, else the default
+    court's, else the first one set -- the same rule _variant_plan uses."""
+    vs = cfg.get("variants", {})
+    for vc in (vs.get(variant), vs.get("default")):
+        if vc and vc.get("image"):
+            return vc
+    return next((x for x in vs.values() if x.get("image")), None)
+
+
+def strip_image_for(cfg, variant, original=None):
+    """The baseline strip a variant gets, or None for 'keep'."""
+    mode = (cfg.get("strips", {}).get(variant) or {}).get("mode", "picture")
+    if mode == "keep":
+        return None
+    text = None
+    if mode == "picture":
+        vc = variant_picture(cfg, variant)
+        if vc and os.path.isfile(vc["image"]):
+            text = extract_baseline_text(Image.open(vc["image"]), tuple(vc["rect"]))
+    return build_strip(text, original)
+
+
 def logo_image_for(team, cfg, variant, size):
     """RGBA logo for a variant per its mode, or None for 'keep'."""
     lc = cfg.get("logos", {}).get(variant) or {"mode": "keep"}
@@ -690,13 +828,18 @@ def logo_image_for(team, cfg, variant, size):
         return Image.new("RGBA", size, (0, 0, 0, 0))
     if lc.get("source") == "file" and lc.get("image") and os.path.isfile(lc["image"]):
         return fit_logo(Image.open(lc["image"]), size)
-    vc = cfg.get("variants", {}).get(variant) or cfg.get("variants", {}).get("default")
-    if not vc or not vc.get("image"):
-        vc = next((x for x in cfg.get("variants", {}).values() if x.get("image")), None)
+    vc = variant_picture(cfg, variant)
     if not vc:
         return None
     src = Image.open(vc["image"])
-    return fit_logo(cut_centre_logo(src, tuple(vc["rect"])), size)
+    # The centre decal draws the whole texture about 3.2x the centre circle's
+    # width, so the cut goes in at that fraction: on the floor it then sits
+    # exactly over the logo painted in the picture.
+    inner = tuple(max(1, round(v * DECAL_CIRCLE_FRACTION)) for v in size)
+    canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+    cut = fit_logo(cut_centre_logo(src, tuple(vc["rect"])), inner)
+    canvas.paste(cut, ((size[0] - inner[0]) // 2, (size[1] - inner[1]) // 2), cut)
+    return canvas
 
 
 # ===========================================================================
@@ -781,15 +924,32 @@ def _set_texture_header(d, h):
     d["m_StreamData"]["size"] = h["stream"]["size"]
 
 
-MATERIAL_COLORS = ("_Tiling_Parquet", "_Offset_Parquet", "_Color_Parquet")
-MATERIAL_FLOATS = ("_Rotate_Parquet", "_ONLY_PARQUET", "_Court_Lines_ON_OFF")
+# shd_bounce_courtLit_v2 paints three vertex-colour zones over the floor:
+# R = apron, G = keys, B = court. Normally each is a flat colour. With
+# _GOAT_Textures_ON_OFF the zones become texture x colour -- the court zones
+# sample _Texture_Parquet, the apron _OutsideTexture (on the parquet mapping
+# when _Outside_Texture_Tiling_ON_OFF is off) -- so white zone colours show the
+# picture -- except the apron, whose _OutsideTexture uses a mapping of its own
+# with no offset, so it can't line up with the picture. The apron therefore
+# gets a small white texture and, per variant, the picture's apron colour.
+# (_ONLY_PARQUET, which the PoC set, is not a property of
+# this shader and does nothing.) The game re-applies the zone colours per
+# variant from the container profiles, so those are set to white as well.
+WHITE_SLOT = SLOT_PREFIX + "_WHITE"     # 4x4 white: the apron is texture x colour
+ZONE_PARAMS = ("_Color_Outside_Court_R", "_Color_Area_G", "_Color_Floor_Court_B")
+WHITE = {"r": 1.0, "g": 1.0, "b": 1.0, "a": 0.0}
+MATERIAL_COLORS = ("_Tiling_Parquet", "_Offset_Parquet", "_Color_Parquet") + ZONE_PARAMS
+MATERIAL_FLOATS = ("_Rotate_Parquet", "_Court_Lines_ON_OFF", "_GOAT_Textures_ON_OFF",
+                   "_Outside_Texture_Tiling_ON_OFF")
 
 
 def _material_snapshot(d):
     props = d["m_SavedProperties"]
     tex = _props(props["m_TexEnvs"])["_Texture_Parquet"]["m_Texture"]
     colors, floats = _props(props["m_Colors"]), _props(props["m_Floats"])
+    out_tex = _props(props["m_TexEnvs"])["_OutsideTexture"]["m_Texture"]
     return {"tex": [tex["m_FileID"], int(tex["m_PathID"])],
+            "outside": [out_tex["m_FileID"], int(out_tex["m_PathID"])],
             "colors": {k: dict(colors[k]) for k in MATERIAL_COLORS if k in colors},
             "floats": {k: floats[k] for k in MATERIAL_FLOATS if k in floats}}
 
@@ -798,23 +958,48 @@ def _material_restore(d, snap):
     props = d["m_SavedProperties"]
     tex = _props(props["m_TexEnvs"])["_Texture_Parquet"]["m_Texture"]
     tex["m_FileID"], tex["m_PathID"] = snap["tex"]
+    if "outside" in snap:
+        out_tex = _props(props["m_TexEnvs"])["_OutsideTexture"]["m_Texture"]
+        out_tex["m_FileID"], out_tex["m_PathID"] = snap["outside"]
     for k, v in snap["colors"].items():
         _set_prop(props["m_Colors"], k, dict(v))
     for k, v in snap["floats"].items():
         _set_prop(props["m_Floats"], k, v)
 
 
-def _material_full_court(d, slot_pid, tiling, offset, lines):
+def apron_colour(img, rect):
+    """Median colour of a court picture's apron (the band between the court
+    rectangle and the image edge), as 0..1 floats."""
+    a = np.asarray(img.convert("RGB"))
+    h, w, _ = a.shape
+    x0, y0, x1, y1 = (int(v) for v in rect)
+    mask = np.ones((h, w), bool)
+    mask[max(0, y0 - 6):y1 + 6, max(0, x0 - 6):x1 + 6] = False
+    px = a[mask]
+    if not len(px):
+        return (0.5, 0.5, 0.5)
+    return tuple(float(v) / 255 for v in np.median(px, axis=0))
+
+
+def _material_full_court(d, slot_pid, tiling, offset, lines, white_pid=None, apron=None):
     props = d["m_SavedProperties"]
     tex = _props(props["m_TexEnvs"])["_Texture_Parquet"]["m_Texture"]
     tex["m_FileID"], tex["m_PathID"] = 0, slot_pid
+    out_tex = _props(props["m_TexEnvs"])["_OutsideTexture"]["m_Texture"]
+    out_tex["m_FileID"], out_tex["m_PathID"] = 0, white_pid or slot_pid
+    for z in ZONE_PARAMS:
+        _set_prop(props["m_Colors"], z, dict(WHITE))
+    if apron is not None:
+        _set_prop(props["m_Colors"], ZONE_PARAMS[0],
+                  {"r": apron[0], "g": apron[1], "b": apron[2], "a": 0.0})
+    _set_prop(props["m_Floats"], "_GOAT_Textures_ON_OFF", 1.0)
+    _set_prop(props["m_Floats"], "_Outside_Texture_Tiling_ON_OFF", 0.0)
     _set_prop(props["m_Colors"], "_Tiling_Parquet",
               {"r": tiling[0], "g": tiling[1], "b": 0.0, "a": 0.0})
     _set_prop(props["m_Colors"], "_Offset_Parquet",
               {"r": offset[0], "g": offset[1], "b": 0.0, "a": 0.0})
     _set_prop(props["m_Colors"], "_Color_Parquet", {"r": 1.0, "g": 1.0, "b": 1.0, "a": 0.0})
     _set_prop(props["m_Floats"], "_Rotate_Parquet", 0.0)
-    _set_prop(props["m_Floats"], "_ONLY_PARQUET", 1.0)
     if lines:
         _set_prop(props["m_Floats"], "_Court_Lines_ON_OFF", 0.0)
 
@@ -823,7 +1008,9 @@ def _structure(game_path, courts, tokens, progress=None):
     """One verified rebuild adding whatever the given teams still lack: a slot
     texture, and (for teams with variants) the tiling/offset profiles.
     Returns True if the file was rebuilt."""
-    need_slots = [t for t in tokens if courts[t]["slot_pid"] is None]
+    need_slots = [SLOT_PREFIX + t for t in tokens if courts[t]["slot_pid"] is None]
+    if tokens and any(c.get("white_pid") is None for c in courts.values()):
+        need_slots.append(WHITE_SLOT)
     raws = tm._read_containers(game_path, tm.find_container_script(game_path))
     new_raw = {}
     for t in tokens:
@@ -863,7 +1050,7 @@ def _structure(game_path, courts, tokens, progress=None):
                 while pid in taken:
                     pid += 1
                 d = copy.deepcopy(base)
-                d["m_Name"] = SLOT_PREFIX + t
+                d["m_Name"] = t
                 d["m_TextureFormat"] = int(TextureFormat.DXT1)
                 w = EndianBinaryWriter(endian=stock.reader.endian)
                 write_typetree(d, node, w, env.file)
@@ -912,9 +1099,19 @@ def _write_team(game_path, team, cfg, tstate, ress_reset=None, progress=None):
     edits = {slot: lambda d, h=header: _set_texture_header(d, h)}
 
     default = plan["default"]
+    aprons = {}
+    for v in team["variants"]:
+        vc = variant_picture(cfg, v)
+        aprons[v] = apron_colour(Image.open(vc["image"]), tuple(vc["rect"]))
+    wdata, wmips = mipchain(Image.new("RGB", (4, 4), (255, 255, 255)), TextureFormat.DXT1)
+    wat = _append_pixels(ress, wdata, ress_reset)
+    white_header = {"m_Width": 4, "m_Height": 4, "m_TextureFormat": int(TextureFormat.DXT1),
+                    "m_MipCount": wmips, "m_CompleteImageSize": len(wdata),
+                    "stream": {"offset": wat, "size": len(wdata)}}
+    edits[team["white_pid"]] = lambda d, h=white_header: _set_texture_header(d, h)
     for role in ("parquet", "lines"):
         edits[mats[role]] = (lambda d, r=role: _material_full_court(
-            d, slot, default[1], default[2], r == "lines"))
+            d, slot, default[1], default[2], r == "lines", team["white_pid"], aprons["default"]))
 
     # Logos
     for tpid, v in logo_jobs:
@@ -938,16 +1135,71 @@ def _write_team(game_path, team, cfg, tstate, ress_reset=None, progress=None):
         edits[tpid] = lambda d, h=lh: _set_texture_header(d, h)
 
     _patch_objects(path, edits)
-    _write_profile_values(game_path, team, {v: (p[1], p[2]) for v, p in plan.items()})
+    _write_profile_values(game_path, team, {v: (p[1], p[2]) for v, p in plan.items()},
+                          zones={(z, v): ((*aprons[v], 0.0) if z == ZONE_PARAMS[0]
+                                          else (1.0, 1.0, 1.0, 0.0))
+                                 for z in ZONE_PARAMS for v in team["variants"]},
+                          originals=originals.setdefault("zones", {}))
+    _write_strips(game_path, team, cfg, originals, ress_reset)
     tstate["slot"] = SLOT_PREFIX + team["token"]
     tstate["rows"] = rows
 
 
-def _write_profile_values(game_path, team, values):
-    """values: {variant: (tiling, offset)}, written in place into every
-    container's profiles."""
-    if len(team["variants"]) < 2:
+def _write_strips(game_path, team, cfg, originals, ress_reset=None):
+    """Baseline text strips for every variant (see STRIP_MODES). They live in
+    resources.assets and are single-level DXT5, as shipped."""
+    spath = os.path.join(game_path, STRIP_FILE)
+    wanted = {n for lst in team.get("strips", {}).values() for n in lst}
+    if not wanted or not os.path.isfile(spath):
         return
+    store = originals.setdefault("strips", {})
+    found = {}
+    env = UnityPy.load(spath)
+    try:
+        for o in env.objects:
+            if o.type.name != "Texture2D":
+                continue
+            try:
+                name = o.peek_name()
+            except Exception:
+                continue
+            if name not in wanted:
+                continue
+            d = o.read_typetree()
+            key = str(o.path_id)
+            if key not in store:
+                if not d["m_StreamData"]["size"]:
+                    continue
+                png = os.path.join(team_dir(team["token"]), f"strip_original_{o.path_id}.png")
+                o.read().image.save(png)
+                store[key] = {"name": name, "header": _texture_header(d), "png": png}
+            found[o.path_id] = d
+    finally:
+        tm.close_env(env)
+    _ensure_original_backup(spath)
+    edits = {}
+    for pid, d in found.items():
+        orig = store[str(pid)]
+        img = strip_image_for(cfg, strip_variant(orig["name"]), Image.open(orig["png"]))
+        if img is None:
+            edits[pid] = lambda d, h=orig["header"]: _set_texture_header(d, h)
+            continue
+        data, _ = image_to_texture2d(img, TextureFormat.DXT5)
+        at = _append_pixels(_ress_for(spath, d), data, ress_reset)
+        h = {"m_Width": STRIP_SIZE[0], "m_Height": STRIP_SIZE[1],
+             "m_TextureFormat": int(TextureFormat.DXT5), "m_MipCount": 1,
+             "m_CompleteImageSize": len(data), "stream": {"offset": at, "size": len(data)}}
+        edits[pid] = lambda d, h=h: _set_texture_header(d, h)
+    if edits:
+        _patch_objects(spath, edits)
+
+
+def _write_profile_values(game_path, team, values, zones=None, originals=None):
+    """In place, in every container of the team: values = {variant: (tiling,
+    offset)} for the tiling/offset profiles; zones = {(param, variant): rgba}
+    (or a single rgba for all) for the Parquet part's zone colours, recording
+    the first-seen originals in `originals` = {container: {param: {variant:
+    rgba}}}."""
     path = _court_path(game_path)
     raws = tm._read_containers(game_path, tm.find_container_script(game_path))
     with open(path, "r+b") as f:
@@ -956,12 +1208,26 @@ def _write_profile_values(game_path, team, values):
             d = parse_profiles(info["raw"])
             if d is None:
                 continue
-            offs = _profile_value_offsets(d, team["variants"])
-            for (part, param, v), off in offs.items():
-                tiling, offset = values.get(v, values["default"])
-                xy = tiling if param == TILING_PARAM else offset
-                f.seek(info["byte_start"] + off)
-                f.write(struct.pack("<4f", xy[0], xy[1], 0.0, 0.0))
+            for pa in d["pairs"]:
+                for pr in pa["profiles"]:
+                    for vkey, rgba, off in pr["values"]:
+                        new = None
+                        if (values and pa["key"] in (PART_PARQUET, PART_LINES)
+                                and pr["param"] in (TILING_PARAM, OFFSET_PARAM)):
+                            tiling, offset = values.get(vkey, values["default"])
+                            xy = tiling if pr["param"] == TILING_PARAM else offset
+                            new = (xy[0], xy[1], 0.0, 0.0)
+                        elif (zones is not None and pa["key"] == PART_PARQUET
+                              and pr["param"] in ZONE_PARAMS):
+                            if originals is not None:
+                                (originals.setdefault(c["name"], {})
+                                 .setdefault(pr["param"], {})
+                                 .setdefault(vkey, list(rgba)))
+                            new = (zones.get((pr["param"], vkey)) if isinstance(zones, dict)
+                                   else zones)
+                        if new is not None:
+                            f.seek(info["byte_start"] + off)
+                            f.write(struct.pack("<4f", *new))
 
 
 def apply(game_path, tokens=None, progress=None):
@@ -1007,11 +1273,21 @@ def revert(game_path, token, progress=None):
         edits[int(key)] = lambda d, h=h: _set_texture_header(d, h)
     if edits:
         _patch_objects(path, edits)
+    strips = {int(k): v["header"] for k, v in originals.get("strips", {}).items()}
+    if strips:
+        _patch_objects(os.path.join(game_path, STRIP_FILE),
+                       {pid: (lambda d, h=h: _set_texture_header(d, h))
+                        for pid, h in strips.items()})
     p = mats.get("parquet", {}).get("colors", {})
     til = p.get(TILING_PARAM, {"r": 0.4, "g": 0.4})
     off = p.get(OFFSET_PARAM, {"r": 0.0, "g": 0.0})
     stock = ((til["r"], til["g"]), (off["r"], off["g"]))
     _write_profile_values(game_path, team, {v: stock for v in team["variants"]})
+    for cname, params in originals.get("zones", {}).items():
+        for param, vals in params.items():
+            one = {"containers": [c for c in team["containers"] if c["name"] == cname]}
+            _write_profile_values(game_path, one, None,
+                                  zones={(param, v): tuple(rgba) for v, rgba in vals.items()})
     tstate["applied"] = False
     tstate.pop("originals", None)
     save_state(state)

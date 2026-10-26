@@ -13,6 +13,10 @@
   have a separate picture for every one. The game sets each variant's
   tiling and offset from data in the team container, so this needs no game
   code changes.
+- **Baseline text matches the picture.** The team name the game paints on the
+  apron (one strip per court variant) is rebuilt from the text in your
+  picture's apron: same words, same lettering and colours. You can also choose
+  none, or keep the game's.
 - **Centre logo: replace, hide or keep.** Replace it with the court's
   centre circle or any image, per court variant. The team-select panel and
   scoreboard follow.
@@ -39,6 +43,12 @@
   rebuild. Everything after that is written in place. **▶ Apply Mods**
   re-writes the pictures, and Floor Patterns and Court Colors skip a team
   with a full court.
+- Full Courts switch the court shader to its texture mode
+  (`_GOAT_Textures_ON_OFF`) with white zone colours, so keys and apron come
+  from the picture instead of the shader's flat colour zones. The apron uses
+  the picture's apron colour, per variant.
+- Camera: on the 2026-27 build the match camera lives in `level1`, not
+  `level2`; the Camera tab now finds it in either.
 - Floor Patterns: pattern pixels now start on a 16-byte boundary in the
   `.resS`. A second pattern could previously land misaligned, which the
   game's texture loader can reject.

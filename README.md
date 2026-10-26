@@ -160,8 +160,9 @@ Replace a team's whole floor with one picture: the wood, apron, keys, lines and 
 
 1. **Export Template…** saves a 2048×1024 court with the game's markings, or use any court image you have.
 2. Pick a team, then **Import Picture…**. The app finds the court lines in the image and shows them as a cyan box. Drag the box edges, or type the numbers, if it's off.
-3. Choose what happens to the **centre logo**: replace it (with the court's own centre circle, or an image file), hide it, or keep the game's. The same logo also shows on the team-select panel and the scoreboard.
-4. **Apply to Game**, then start a home game for that team.
+3. **Baseline text**: by default the team name the game paints on the apron is rebuilt from the text in your picture (or choose none, or keep the game's).
+4. Choose what happens to the **centre logo**: replace it (with the court's own centre circle, or an image file), hide it, or keep the game's. The same logo also shows on the team-select panel and the scoreboard.
+5. **Apply to Game**, then start a home game for that team.
 
 **Retro courts:** teams with throwback courts list each one in the **Court** picker, and each can have its own picture. A court left empty uses the default court's picture. Alternate logos that don't come with a retro court share the default court, because that's how the game picks courts.
 

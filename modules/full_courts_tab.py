@@ -34,6 +34,7 @@ OK_GREEN = "#4ade80"
 RECT_COL = "#00e5ff"
 PREVIEW_W, PREVIEW_H = 640, 320
 LOGO_PX = 150
+STRIP_PX = (240, 30)
 
 INFO_TEXT = (
     "Put one picture on a team's whole floor: wood, apron, keys, lines and logos. "
@@ -74,6 +75,7 @@ class FullCourtsTab(tk.Frame):
         self._drag = None
         self._tk_preview = None
         self._tk_logo = None
+        self._tk_strip = None
         self.ok = "#15803d" if _is_light(self.th["bg"]) else OK_GREEN
         self._init_styles()
         self._build()
@@ -212,6 +214,19 @@ class FullCourtsTab(tk.Frame):
         self.logo_note = tk.Label(logo, text="", bg=t["bg"], fg=t["muted"],
                                   font=("Segoe UI", 8), wraplength=230, justify="left")
         self.logo_note.pack(fill="x", padx=8, pady=(0, 8))
+
+        base = ttk.Labelframe(right, text=" Baseline text ", style="FC.TLabelframe")
+        base.pack(fill="x", pady=(8, 0))
+        self.strip_mode = tk.StringVar(value="picture")
+        for val, text in (("picture", "Use the picture's (cut from its apron)"),
+                          ("none", "None (NBA logo only)"),
+                          ("keep", "Keep the game's")):
+            ttk.Radiobutton(base, text=text, value=val, variable=self.strip_mode,
+                            style="FC.TRadiobutton", command=self._on_strip_change
+                            ).pack(anchor="w", padx=8)
+        self.strip_canvas = tk.Canvas(base, width=STRIP_PX[0], height=STRIP_PX[1],
+                                      bg=t["panel"], highlightthickness=0)
+        self.strip_canvas.pack(padx=8, pady=6)
 
         act = tk.Frame(right, bg=t["bg"])
         act.pack(fill="x", pady=10)
@@ -509,7 +524,38 @@ class FullCourtsTab(tk.Frame):
         return self._team_cfg().get("logos", {}).get(self.variant) or \
             {"mode": "replace", "source": "court"}
 
+    def _on_strip_change(self):
+        if not self.token:
+            return
+        team = self._team_cfg(create=True)
+        team.setdefault("strips", {})[self.variant] = {"mode": self.strip_mode.get()}
+        self._save()
+        self._draw_strip()
+
+    def _draw_strip(self):
+        c = self.strip_canvas
+        c.delete("all")
+        if not self.token:
+            return
+        sc = self._team_cfg().get("strips", {}).get(self.variant) or {}
+        self.strip_mode.set(sc.get("mode", "picture"))
+        if self.strip_mode.get() == "keep":
+            c.create_text(STRIP_PX[0] / 2, STRIP_PX[1] / 2, text="the game's own text",
+                          fill=self.th["muted"])
+            return
+        try:
+            img = fc.strip_image_for(self._team_cfg(), self.variant)
+        except Exception:
+            img = None
+        if img is None:
+            return
+        bg = Image.new("RGBA", img.size, (40, 40, 40, 255))
+        bg.alpha_composite(img)
+        self._tk_strip = ImageTk.PhotoImage(bg.resize(STRIP_PX, Image.LANCZOS))
+        c.create_image(0, 0, image=self._tk_strip, anchor="nw")
+
     def _load_logo_controls(self):
+        self._draw_strip()
         lc = self._logo_cfg()
         self.logo_mode.set(lc.get("mode", "replace"))
         self.logo_source.set(lc.get("source", "court"))

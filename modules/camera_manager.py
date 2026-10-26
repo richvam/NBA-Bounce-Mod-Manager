@@ -742,8 +742,24 @@ class CameraManager:
         return (st.st_size, st.st_mtime_ns)
 
     def load(self):
-        """Resolve every offset the camera needs. Slow (reads level2): call it
-        off the UI thread. Raises CameraError with a readable message."""
+        """Resolve every offset the camera needs, in whichever scene holds the
+        match camera: level2 before the 2026-27 update, level1 since. Slow:
+        call it off the UI thread. Raises CameraError with a readable message."""
+        first = None
+        for name in dict.fromkeys([os.path.basename(self.scene), SCENE_FILE]
+                                  + [f"level{i}" for i in range(6)]):
+            path = os.path.join(os.path.dirname(self.scene) or self.root, name)
+            if not os.path.isfile(path):
+                continue
+            self.scene = path
+            try:
+                return self._load_scene()
+            except CameraError as e:
+                first = first or e
+        raise first or CameraError("No level files were found in the game data folder.\n"
+                                   "Check the game path in Settings.")
+
+    def _load_scene(self):
         if not os.path.isfile(self.scene):
             raise CameraError("level2 was not found in the game data folder.\n"
                               "Check the game path in Settings.")

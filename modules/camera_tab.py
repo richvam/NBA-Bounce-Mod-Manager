@@ -822,7 +822,7 @@ class CameraTab(tk.Frame):
             return
         self._load_started = True
         self.cm = cmgr.CameraManager(self.game_data_path)
-        self._run_bg("Reading the game camera… (level2 is 95 MB)", self._bg_load,
+        self._run_bg("Reading the game camera…", self._bg_load,
                      self._after_refresh)
 
     def _bg_load(self):
@@ -953,8 +953,9 @@ class CameraTab(tk.Frame):
             self._write_active(preset)
             self._after_refresh(live)
             self._say(f"{rep['verified']} of {rep['written']} values verified", self.ok)
-            extra = ("\n\nA one-time safety copy of level2 was saved as "
-                     "level2.camera_backup." if rep["backed_up"] else "")
+            scene = os.path.basename(self.cm.scene)
+            extra = (f"\n\nA one-time safety copy of {scene} was saved as "
+                     f"{scene}.camera_backup." if rep["backed_up"] else "")
             messagebox.showinfo("Camera", f"{done_msg}\n\n{AFTER_TEXT}{extra}", parent=self)
         self._run_bg("Writing the camera to level2…", work, done)
 

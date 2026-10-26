@@ -48,7 +48,7 @@ Relevant `shd_bounce_courtLit_v2` properties (all size-neutral to patch):
 | `_Color_Parquet` | Color | Multiplies the texture. Set it to white (1, 1, 1) |
 | `_Rotate_Parquet` | Float | Set to 0 |
 | `_Court_Lines_ON_OFF` | Float | Set to 0 on the **lines** material to hide the game's lines |
-| `_ONLY_PARQUET` | Float | Set to **1** on both materials. Removes the apron (`_Color_Outside_Court_R`) and key (`_Color_Area_G`) colour zones the shader paints from its court mask |
+| `_ONLY_PARQUET` | Float | **Not a property of this shader** (a stale float on the materials); setting it does nothing. See §8a for what actually removes the colour zones |
 | `_OutsideTexture`, `_Outside_Texture_*`, `_GOAT_Textures_ON_OFF` | — | Unused by this approach (untested) |
 
 ### Mapping (verified with a grid test image)
@@ -242,6 +242,52 @@ padding. One pattern is 174,776 bytes (≡ 8 mod 16), so a second simultaneous
 pattern lands misaligned. Pad to 16 bytes before appending, as the PoC does.
 
 ---
+
+## 8a. Corrections found while shipping (2026-10-26)
+
+**Colour zones.** `shd_bounce_courtLit_v2` paints three vertex-colour zones over
+the floor: R = apron (`_Color_Outside_Court_R`), G = keys (`_Color_Area_G`),
+B = court (`_Color_Floor_Court_B`). By default each one is a flat colour.
+`_ONLY_PARQUET` and `_Parquet_Opacity_Colorized` are not shader properties at all;
+the PoC only looked right because its test colours matched. What works:
+
+- `_GOAT_Textures_ON_OFF` = 1 turns every zone into *texture × zone colour*: the
+  court and key zones sample `_Texture_Parquet`, and the apron samples `_OutsideTexture`.
+- The court and key zone colours are set to white, so they show the picture. The game
+  re-applies zone colours per variant from the container profiles, so the
+  profile values are set to white too (and restored on revert).
+- `_OutsideTexture` uses a mapping of its own with no offset
+  (`_Outside_Texture_Tiling_ON_OFF` / `_Outside_Texture_Tiling`), so it can't line up
+  with the picture. Full Courts points it at a 4×4 white texture
+  (`FULLCOURT__WHITE`) and sets each variant's `_Color_Outside_Court_R` to the
+  median colour of that picture's apron.
+
+**Baseline text.** The team name on the apron is `txt_bounce_court_<Team>_D`
+(plus `_retroLogo_n_team_m` per variant). It's a 2048×256 DXT5 strip with one mip,
+in `resources.assets`. `Texture2DReference` loads it with `Resources.Load` into the
+letters material (`_Decoration_Texture`) and the decorations material.
+The layout is the long name across x 0–1580, then a small stacked name and the NBA
+logo at the right. Full Courts cuts the text painted in the picture's left
+apron: it keys out the apron colour, takes the nearest run of inked columns, and
+rotates it to read left to right. That text fills both name areas, and the NBA
+logo is kept.
+
+**Centre logo size.** The centre decal draws the whole logo texture at about
+3.16× the centre circle's width (measured in game). The court-cut logo therefore
+goes into the texture at 1/3.16 scale, so it lands exactly on the logo painted
+in the picture. The panel and scoreboard then show it smaller.
+
+**Court detection.** Darker parquet (the Celtics and Nets) needed a wider
+wood colour test. Rows are measured only across the court's columns, so the
+rows through the keys and logo still count.
+
+**Camera on this build.** The match camera moved from `level2` to `level1`.
+`camera_manager` now looks in every level file.
+
+**Verified in game:** Knicks 2000, Jazz Delta Center, Celtics Garden parquet,
+Blazers Rose Garden and NJ Nets NBA 50 (all on retro variants), and the Bobcats
+04–05 (default variant). Each showed the picture's keys, apron and wordmarks,
+plus matching baseline text.
 
 ## 8. Testing approach that worked
 
