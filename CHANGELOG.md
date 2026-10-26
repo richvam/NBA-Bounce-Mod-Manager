@@ -4,6 +4,18 @@
 
 ### What's New
 
+- **New Full Courts tab: one picture for a team's whole floor.** Wood,
+  apron, keys, lines and logos all come from your image. Start from the
+  exported template or any court image; the app finds the court lines, and
+  you can drag them into place. The game's own lines and colour zones are
+  switched off for that court.
+- **A different court for each retro logo.** Teams with throwback courts can
+  have a separate picture for every one. The game sets each variant's
+  tiling and offset from data in the team container, so this needs no game
+  code changes.
+- **Centre logo: replace, hide or keep.** Replace it with the court's
+  centre circle or any image, per court variant. The team-select panel and
+  scoreboard follow.
 - **New Camera tab: change the match camera.** Nine built-in cameras
   (Default, Broadcast, 2K Drive, 2K Half-Court, Classic Live Iso, Classic
   Live Iso (PC), Zoom, Close-Up, Overhead),
@@ -21,6 +33,15 @@
   frame it, so you can line a camera up without launching the game.
 
 ### Details
+
+- Full Courts: the first apply for a team adds a `FULLCOURT_<Team>` texture
+  (and, for teams with retro courts, two material profiles) in one verified
+  rebuild. Everything after that is written in place. **▶ Apply Mods**
+  re-writes the pictures, and Floor Patterns and Court Colors skip a team
+  with a full court.
+- Floor Patterns: pattern pixels now start on a 16-byte boundary in the
+  `.resS`. A second pattern could previously land misaligned, which the
+  game's texture loader can reject.
 
 - Every camera write is a fixed-size, in-place float write into `level2`
   (29 values). File size never changes, other mods in `level2` are untouched,

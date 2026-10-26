@@ -98,7 +98,7 @@ import game_layout
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
-APP_VERSION    = "3.2.0"
+APP_VERSION    = "4.0.0"
 CONFIG_FILE    = app_paths.user("config.json")
 MODS_META_FILE = "mods.json"
 BACKUP_SUFFIX  = ".original_backup"
@@ -505,6 +505,15 @@ def _get_encode_format(original_format_id, size=None):
             return fmt, fmt.value
         except ValueError:
             return TF.RGBA32, TF.RGBA32.value
+
+
+def _full_court_tokens():
+    """Teams with a Full Courts picture applied; Court Colors leaves them be."""
+    try:
+        import full_courts
+        return full_courts.active_tokens()
+    except Exception:
+        return set()
 
 
 def apply_single_mod(assets_path, path_id, replacement_png_path, ress_reset=None):
@@ -1532,6 +1541,11 @@ class ModManagerApp(tk.Tk):
                 self.camera_frame.set_game_path(gp)
             except Exception:
                 pass
+        if getattr(self, "full_courts_frame", None) is not None:
+            try:
+                self.full_courts_frame.set_game_path(gp)
+            except Exception:
+                pass
         if getattr(self, "mesh_frame", None) is not None:
             try:
                 self.mesh_frame.reload_config(self.cfg)
@@ -1785,6 +1799,7 @@ class ModManagerApp(tk.Tk):
             "Tune CPU skill, shot windows, and movement to match how you like to play.",
             self._open_gameplay_sliders_dialog)
         self._build_camera_tab(self.notebook)
+        self._build_full_courts_tab(self.notebook)
         self.court_colors_tab = self._build_tool_tab(
             self.notebook, "🎨 Court Colors", "🎨", "Court Colors",
             "Recolor each team's floor and court lines.",
@@ -2004,6 +2019,9 @@ class ModManagerApp(tk.Tk):
         n, notes = self._reapply_floor_slots(ress_reset)
         applied += n
         errors += [n_ for n_ in notes if not n_.startswith("Floor patterns were undone")]
+        n, notes = self._reapply_full_courts(ress_reset)
+        applied += n
+        errors += [n_ for n_ in notes if not n_.startswith("Full courts were undone")]
         if self.mesh_frame is not None and self._mesh_mod_count():
             try:
                 m_applied, m_errors, _w = self.mesh_frame.apply_all(
@@ -2050,6 +2068,16 @@ class ModManagerApp(tk.Tk):
         except Exception as e:
             return 0, [f"Floor patterns: {e}"]
 
+    def _reapply_full_courts(self, ress_reset):
+        """Full Courts keep their court and logo pixels at the end of the court
+        file's .resS too, so they are re-appended in the same pass."""
+        try:
+            import full_courts
+            return full_courts.reapply_full_courts(
+                self.cfg.get("game_data_path", ""), ress_reset)
+        except Exception as e:
+            return 0, [f"Full courts: {e}"]
+
     def save_cfg(self):
         """Persist self.cfg. For tabs that keep a setting of their own (the
         Teams tab's HardWoods DLC toggle) without importing this module."""
@@ -2091,6 +2119,37 @@ class ModManagerApp(tk.Tk):
                      justify="left",
                      text=f"Camera tab unavailable:\n{e}\n\ncamera_tab.py and "
                           f"camera_manager.py should sit in the modules folder "
+                          f"next to app.py.").pack(anchor="w", padx=20, pady=20)
+
+    # ── Full Courts tab ───────────────────────────────────────────────────────
+    def _build_full_courts_tab(self, notebook):
+        """One picture over a team's whole court, optionally one per retro
+        court. Lives in full_courts_tab.py + full_courts.py, which import
+        nothing from this file. Imported lazily so a missing or broken module
+        degrades to a message instead of blocking startup."""
+        tab = ttk.Frame(notebook, style="TFrame")
+        notebook.add(tab, text="🏟 Full Courts")
+        self.full_courts_tab = tab
+        try:
+            from full_courts_tab import FullCourtsTab
+            self.full_courts_frame = FullCourtsTab(
+                tab, self.cfg.get("game_data_path", ""), host=self, theme={
+                    "bg":     self.C["bg"],
+                    "panel":  self.C["panel"],
+                    "accent": self.C["accent"],
+                    "text":   self.C["text"],
+                    "muted":  self.C["sub"],
+                    "entry":  self.C["ebg"],
+                    "gold":   self.C["gold"],
+                    "red":    self.C["hi"],
+                })
+            self.full_courts_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.full_courts_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
+                     justify="left",
+                     text=f"Full Courts tab unavailable:\n{e}\n\nfull_courts_tab.py and "
+                          f"full_courts.py should sit in the modules folder "
                           f"next to app.py.").pack(anchor="w", padx=20, pady=20)
 
     def _build_saves_tab(self, notebook):
@@ -2163,6 +2222,8 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.audio_tab)),
             ("🧊", "Meshes", "View, export, and replace the game's 3D models.",
              lambda: self._goto_tab(self.meshes_tab)),
+            ("🏟", "Full Courts", "Put one picture on a team's whole floor, per retro court.",
+             lambda: self._goto_tab(self.full_courts_tab)),
             ("🪵", "Floor Patterns", "Pick a wood-grain pattern for each team's court.",
              lambda: self._goto_tab(self.floor_patterns_tab)),
             ("🎚", "Gameplay Sliders", "Tune CPU skill, shot windows, and movement.",
@@ -2240,6 +2301,8 @@ class ModManagerApp(tk.Tk):
             self.team_frame.load(silent=True)
         elif getattr(self, "camera_frame", None) is not None and current is getattr(self, "camera_tab", None):
             self.camera_frame.load(silent=True)
+        elif getattr(self, "full_courts_frame", None) is not None and current is getattr(self, "full_courts_tab", None):
+            self.full_courts_frame.load(silent=True)
         elif current is getattr(self, "floor_patterns_tab", None):
             self.after(50, self._open_floor_patterns_dialog)
         elif current is getattr(self, "sliders_tab", None):
@@ -2795,6 +2858,8 @@ class ModManagerApp(tk.Tk):
         # may just have rewound -- write their pixels again in the same pass.
         floor_n, floor_notes = self._reapply_floor_slots(ress_reset)
         warnings += floor_notes
+        court_n, court_notes = self._reapply_full_courts(ress_reset)
+        warnings += court_notes
 
         # Meshes second, sharing ress_reset so both kinds of mod end up in the
         # same .resS pass (see the docstring).
@@ -2810,6 +2875,7 @@ class ModManagerApp(tk.Tk):
         msg = f"✅ Applied {applied}/{count} texture mods."
         if mesh_count: msg = msg[:-1] + f" and {mesh_applied}/{mesh_count} mesh mods."
         if floor_n: msg += f" Re-wrote {floor_n} floor pattern slot(s)."
+        if court_n: msg += f" Re-wrote {court_n} full court(s)."
         if uncropped: msg += f" Un-cropped {uncropped} sprite(s)."
         if backed_up: msg += f" Backed up: {', '.join(backed_up)}."
         if errors:
@@ -2841,6 +2907,11 @@ class ModManagerApp(tk.Tk):
         if self.mesh_frame is not None:
             try:
                 self.mesh_frame.refresh_after_restore()
+            except Exception:
+                pass
+        if getattr(self, "full_courts_frame", None) is not None:
+            try:
+                self.full_courts_frame.load(silent=True)
             except Exception:
                 pass
         self.status_var.set(f"✅ Restored {restored} file(s). Your mods are still saved — re-apply anytime.")
@@ -3237,6 +3308,10 @@ class ModManagerApp(tk.Tk):
                 return
             status_lbl.configure(text=f"Loading {team}…")
             self.update_idletasks()
+            if team in _full_court_tokens():
+                status_lbl.configure(text=f"⚠ {team} has a full court picture (Full Courts tab), "
+                                          "so its colors can't be changed here until it's reverted.")
+                return
 
             state["materials"] = {}
             missing = []
@@ -3432,6 +3507,10 @@ class ModManagerApp(tk.Tk):
         def apply_colors():
             if not state["materials"]:
                 messagebox.showwarning("No team selected", "Pick a team first.", parent=dlg); return
+            if team_var.get() in _full_court_tokens():
+                messagebox.showinfo("Full court",
+                    f"{team_var.get()} has a full court picture, which replaces its court "
+                    "colors. Revert it in the Full Courts tab first.", parent=dlg); return
             status_lbl.configure(text="Applying…"); self.update_idletasks()
             # Write every color property to every material we found for this
             # team -- we can't always be sure in advance which material

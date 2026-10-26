@@ -756,9 +756,10 @@ class FloorPatternManager:
         _Texture_Parquet PPtr is 12 bytes at a fixed spot in its material."""
         mat_path = os.path.join(self.game_path, MAT_FILE)
         n = 0
+        full = _full_court_tokens()
         with open(mat_path, "r+b") as f:
             for team, pid in targets.items():
-                if team not in self.courts:
+                if team not in self.courts or team in full:
                     continue
                 pptr = struct.pack("<iq", 0, pid if pid else self.stock_pid)
                 for _name, off in self.courts[team]["materials"]:
@@ -782,6 +783,16 @@ class FloorPatternManager:
 # ===========================================================================
 # Slot textures (2026-27 build onward)
 # ===========================================================================
+def _full_court_tokens():
+    """Courts carrying a Full Courts picture. Their _Texture_Parquet points at
+    that picture, so Floor Patterns must not repoint them."""
+    try:
+        import full_courts
+        return full_courts.active_tokens()
+    except Exception:
+        return set()
+
+
 def _slot_number(name):
     try:
         return int(name[len(SLOT_PREFIX):])
@@ -898,9 +909,13 @@ def _write_slot_pixels(assets_path, path_id, data, ress_reset=None):
                 if os.path.exists(ress + ORIGINAL_BACKUP):
                     shutil.copy2(ress + ORIGINAL_BACKUP, ress)
                 ress_reset.add(key)
-        offset = os.path.getsize(ress)
+        # Unity's async loader needs a 16-byte-aligned stream, and one pattern
+        # is 174,776 bytes (8 mod 16), so pad before every append.
+        end = os.path.getsize(ress)
+        pad = -end % 16
+        offset = end + pad
         with open(ress, "ab") as f:
-            f.write(data)
+            f.write(b"\0" * pad + data)
         d["m_StreamData"]["offset"] = offset
         d["m_StreamData"]["size"] = len(data)
         w = EndianBinaryWriter(endian=endian)
@@ -1207,9 +1222,11 @@ if HAVE_TK:
           self.status.configure(text=msg)
 
       def _populate(self):
+          full = _full_court_tokens()
           for t in sorted(self.mgr.courts):
-              self.tree.insert("", "end", iid=t, text=t,
-                               values=(self._label_for(self.assignments.get(t)),))
+              label = ("Full court (see Full Courts tab)" if t in full
+                       else self._label_for(self.assignments.get(t)))
+              self.tree.insert("", "end", iid=t, text=t, values=(label,))
           self._build_gallery()
           self._refresh_slots()
           live = (load_state().get("slot_patterns") if self.mgr.mode == "slots"
@@ -1396,6 +1413,12 @@ if HAVE_TK:
 
       def _assign(self):
           if not (self.sel_team and self.sel_pattern):
+              return
+          if self.sel_team in _full_court_tokens():
+              messagebox.showinfo(
+                  "Full court", f"{self.sel_team} has a full court picture, which "
+                  f"replaces its floor pattern. Revert it in the Full Courts tab first.",
+                  parent=self)
               return
           if self.sel_pattern == STOCK_KEY:      # stock == reset, costs no slot
               self._unassign()

@@ -628,7 +628,7 @@ def configure(game_data, *modules, refresh=False):
 
 
 # Modules with an apply_layout() hook that call attach() when imported.
-LAYOUT_MODULES = ("team_manager", "slider_manager", "floor_patterns")
+LAYOUT_MODULES = ("team_manager", "slider_manager", "floor_patterns", "full_courts")
 _current = None
 
 

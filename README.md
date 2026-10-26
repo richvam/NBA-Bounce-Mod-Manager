@@ -19,6 +19,7 @@
 | Textures | Browse, preview, export, and replace any of the ~2,000+ `Texture2D` assets in the game |
 | Audio | Browse, play, tag the language of, and replace any in-game audio clip |
 | Meshes | View any of the game's 3D models in an orbit/zoom viewport, export them to OBJ/GLB/PLY/STL, and import replacements |
+| Full Courts | **New in v4.0:** put one picture on a team's whole floor (wood, apron, keys, lines, logos), a different one for each retro court, and replace or hide the centre logo |
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Camera | **New in v3.2:** pick a match camera (Default, Broadcast, 2K Drive, 2K Half-Court, Classic Live Iso, Zoom, Close-Up, Overhead), fine-tune it with sliders, and share presets as `.bouncecam` files. One click always reverts to the original camera |
@@ -150,6 +151,21 @@ Display modes: **Shaded**, **Textured** (pick any PNG with **Texture…** — fo
 Skinned meshes (marked 🦴) keep animating: bone weights are copied from the nearest original vertex, since a model you made in Blender won't have the game's rigging.
 
 Full details, modelling rules and troubleshooting: **[docs/MESH_MODDING_GUIDE.md](docs/MESH_MODDING_GUIDE.md)**.
+
+---
+
+## Full Courts
+
+Replace a team's whole floor with one picture: the wood, apron, keys, lines and painted logos all come from your image.
+
+1. **Export Template…** saves a 2048×1024 court with the game's markings, or use any court image you have.
+2. Pick a team, then **Import Picture…**. The app finds the court lines in the image and shows them as a cyan box. Drag the box edges, or type the numbers, if it's off.
+3. Choose what happens to the **centre logo**: replace it (with the court's own centre circle, or an image file), hide it, or keep the game's. The same logo also shows on the team-select panel and the scoreboard.
+4. **Apply to Game**, then start a home game for that team.
+
+**Retro courts:** teams with throwback courts list each one in the **Court** picker, and each can have its own picture. A court left empty uses the default court's picture. Alternate logos that don't come with a retro court share the default court, because that's how the game picks courts.
+
+A team with a full court ignores Floor Patterns and Court Colors until you **Revert Team**. The first apply adds that team's court texture to the game files (a checked rebuild). **▶ Apply Mods** re-writes the pictures each time it runs, and after **Restore Game Files** the tab tells you to apply again. How it works: [`docs/FULL_COURTS_GUIDE.md`](docs/FULL_COURTS_GUIDE.md).
 
 ---
 
@@ -345,6 +361,7 @@ nba-bounce-mod-manager/
 │   ├── mesh_manager.py          #   Mesh decode/encode, OBJ/GLB/PLY/STL, writeback
 │   ├── sprite_crop.py           #   Widens baked sprite crops so replacements aren't cut off
 │   ├── floor_patterns.py        #   Floor Patterns tool
+│   ├── full_courts.py / full_courts_tab.py  # Full Courts tab: whole-court pictures
 │   ├── retro_eras.py            #   Names each court's throwback era
 │   ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
 │   ├── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
@@ -368,6 +385,7 @@ nba-bounce-mod-manager/
 └── user/                        # Everything the app WRITES — yours, never overwritten
     ├── config.json              #   Saved paths and theme preference
     ├── floor_patterns.json      #   Which pattern each court is set to
+    ├── full_courts.json, full_courts/  # Full Courts settings and your imported pictures
     ├── unlockables_catalog.json #   Cached unlockable ids read from level1
     ├── camera_presets/          #   Your saved and imported camera presets (.bouncecam)
     ├── camera_active.json       #   The last camera you applied (for re-apply after a restore)
