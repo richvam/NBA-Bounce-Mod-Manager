@@ -1,5 +1,39 @@
 # Changelog
 
+## v4.0.0 (unreleased)
+
+### What's New
+
+- **New Camera tab: change the match camera.** Nine built-in cameras
+  (Default, Broadcast, 2K Drive, 2K Half-Court, Classic Live Iso, Classic
+  Live Iso (PC), Zoom, Close-Up, Overhead),
+  sliders for every part of the camera, your own saved presets, and
+  `.bouncecam` import/export for sharing. Asset-file patching only.
+- **Behind-the-play camera style (NBA 2K look).** Near a basket the camera
+  sits back by half court and looks down the floor at the rim. At mid-court
+  it swings out to the sideline. The 2K Half-Court preset was fitted to the
+  court lines of an NBA 2K screenshot.
+- **Isometric camera style (classic NBA Live).** All six camera points share
+  one rotation, so the view slides with the ball but never turns, not even
+  on a change of possession. Two presets: Classic Live Iso (tuned in game: a
+  long-lens 45 degree corner diagonal) and Classic Live Iso (PC) (the mirrored, closer view).
+- **Camera view preview:** a wireframe of the court as the game camera would
+  frame it, so you can line a camera up without launching the game.
+
+### Details
+
+- Every camera write is a fixed-size, in-place float write into `level2`
+  (29 values). File size never changes, other mods in `level2` are untouched,
+  and every write is read back and verified.
+- **Revert to Default Camera** is always available. The Default preset
+  holds the game's original values at full precision, so reverting is
+  byte-for-byte identical to a clean install and needs no backup. A one-time
+  `level2.camera_backup` is still made before the first write, as a safety net.
+- The GameplayCamera layout is checked to the byte before anything is written.
+  If a game update changes it, camera editing switches itself off.
+- The tab remembers the last camera you applied and offers to re-apply it if a
+  restore puts the stock camera back.
+
 ## v3.2.0
 
 ### What's New
