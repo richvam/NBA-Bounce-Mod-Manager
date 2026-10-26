@@ -21,6 +21,7 @@
 | Meshes | View any of the game's 3D models in an orbit/zoom viewport, export them to OBJ/GLB/PLY/STL, and import replacements |
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
+| Camera | **New in v3.2:** pick a match camera (Default, Broadcast, 2K Drive, 2K Half-Court, Classic Live Iso, Zoom, Close-Up, Overhead), fine-tune it with sliders, and share presets as `.bouncecam` files. One click always reverts to the original camera |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
 | Saves | Unlock mascots, jerseys, logos, balls and trails by editing your save file |
 | Teams | **New in v3.1:** add brand-new custom teams to the game, rename and recolor any team, borrow logos/jerseys/courts, and rearrange the team-select grid |
@@ -165,6 +166,25 @@ Fine-tune how the game plays across 7 categories: Shooting, Passing, Defense, Re
 - **Which difficulty in-game?**: an in-app explainer, since NBA Bounce's own Rookie / Advanced / Pro menu doesn't line up one-to-one with these preset names
 - **Apply to Game** / **Restore Stock**
 - **Save Set** / **Load Set**: save your own slider combinations and reload them later
+
+---
+
+## Camera
+
+Change the in-match camera. NBA Bounce builds its camera from six fixed camera positions (near and far side of the court, each at left, center and right) and blends between them as the ball moves. This tab rewrites those positions and the tracking settings that go with them.
+
+- **Built-in presets:** Default (the original), Broadcast (high sideline TV angle), 2K Drive (low and tight, follows the ball handler), 2K Half-Court (NBA 2K-style view from behind the play), Classic Live Iso and Classic Live Iso (PC) (the fixed diagonal 16-bit NBA Live view), Zoom, Close-Up and Overhead
+- **Three camera styles:**
+  - *Sideline*: the game's own layout.
+  - *Behind the play (NBA 2K)*: when the ball is near a basket, the camera sits back toward half court and looks down the floor at the rim. Around mid-court it swings out to a sideline view, and the game blends between the two on its own.
+  - *Isometric (classic NBA Live)*: one fixed diagonal angle. The view slides with the ball but never turns, not even on a change of possession
+- **Sliders:** distance, height, tilt, field of view and sideways follow for either style, plus tracking (follow smoothing, lead, vertical follow) and draw distance. Hover a label for what it does
+- **Live preview:** side view, top view, and a wireframe **camera view** of the court lines, rims and backboards as the game camera would frame them, with the ball near a basket or at mid-court. It updates as you drag
+- **Save as My Preset / Import / Export:** your presets live in `user/camera_presets/`. Share a `.bouncecam` file with friends and they can import it. Imported files are checked and bad values are rejected
+- **Apply to Game / Revert to Default Camera:** Revert is always available and puts the game's original camera back exactly. It doesn't need a backup file and leaves your other mods alone
+- If something else restores `level2` (Restore Game Files, the sliders' Restore Stock, or a Steam file check), the tab tells you and offers to re-apply your camera
+
+Close the game before applying. It reads the camera once at startup. The intro, jump ball, halftime and victory shots use their own animations and don't change.
 
 ---
 
@@ -314,6 +334,7 @@ nba-bounce-mod-manager/
 │   ├── retro_eras.py            #   Names each court's throwback era
 │   ├── slider_tab.py / slider_manager.py   # Gameplay Sliders tool
 │   ├── save_tab.py / save_manager.py       # Saves tool: unlock cosmetics via the .sav
+│   ├── camera_tab.py / camera_manager.py   # Camera tab: presets, sliders, .bouncecam sharing
 │   └── team_tab.py / team_manager.py / team_layout.py  # Teams tab: custom teams, art, grid layout
 │
 ├── data/                        # Catalogs that ship with the app (read-only)
@@ -334,6 +355,8 @@ nba-bounce-mod-manager/
     ├── config.json              #   Saved paths and theme preference
     ├── floor_patterns.json      #   Which pattern each court is set to
     ├── unlockables_catalog.json #   Cached unlockable ids read from level1
+    ├── camera_presets/          #   Your saved and imported camera presets (.bouncecam)
+    ├── camera_active.json       #   The last camera you applied (for re-apply after a restore)
     └── save_backups/            #   Fallback copies of your .sav
 ```
 

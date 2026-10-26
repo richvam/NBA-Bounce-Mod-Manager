@@ -1342,6 +1342,7 @@ class ModManagerApp(tk.Tk):
             self.notebook, "🎚 Gameplay Sliders", "🎚", "Gameplay Sliders",
             "Tune CPU skill, shot windows, and movement to match how you like to play.",
             self._open_gameplay_sliders_dialog)
+        self._build_camera_tab(self.notebook)
         self.court_colors_tab = self._build_tool_tab(
             self.notebook, "🎨 Court Colors", "🎨", "Court Colors",
             "Recolor each team's floor and court lines.",
@@ -1591,6 +1592,43 @@ class ModManagerApp(tk.Tk):
         save_config(self.cfg)
 
     # ── Saves tab ─────────────────────────────────────────────────────────────
+    # ── Camera tab ────────────────────────────────────────────────────────────
+    def _build_camera_tab(self, notebook):
+        """Match camera presets: built-ins (Default, Broadcast, 2K Drive, ...),
+        editable sliders, user presets, and .bouncecam import/export.
+
+        Lives in camera_tab.py + camera_manager.py, which are self-contained:
+        they import nothing from this file and never call apply_single_mod().
+        Every camera write is a fixed-width, in-place float write into level2,
+        so it can't disturb queued mods, and "Revert to Default Camera" needs
+        no backup file. Imported lazily so a missing or broken module degrades
+        to a message instead of blocking startup.
+        """
+        tab = ttk.Frame(notebook, style="TFrame")
+        notebook.add(tab, text="🎥 Camera")
+        self.camera_tab = tab
+        try:
+            from camera_tab import CameraTab
+            self.camera_frame = CameraTab(
+                tab, self.cfg.get("game_data_path", ""), host=self, theme={
+                    "bg":     self.C["bg"],
+                    "panel":  self.C["panel"],
+                    "accent": self.C["accent"],
+                    "text":   self.C["text"],
+                    "muted":  self.C["sub"],
+                    "entry":  self.C["ebg"],
+                    "gold":   self.C["gold"],
+                    "red":    self.C["hi"],
+                })
+            self.camera_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.camera_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10),
+                     justify="left",
+                     text=f"Camera tab unavailable:\n{e}\n\ncamera_tab.py and "
+                          f"camera_manager.py should sit in the modules folder "
+                          f"next to app.py.").pack(anchor="w", padx=20, pady=20)
+
     def _build_saves_tab(self, notebook):
         """Unlock cosmetics by editing the player's .sav.
 
@@ -1654,6 +1692,8 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.floor_patterns_tab)),
             ("🎚", "Gameplay Sliders", "Tune CPU skill, shot windows, and movement.",
              lambda: self._goto_tab(self.sliders_tab)),
+            ("🎥", "Camera", "Broadcast, 2K Drive and more camera angles. Tune and share them.",
+             lambda: self._goto_tab(self.camera_tab)),
             ("🎨", "Court Colors", "Recolor each team's floor and court lines.",
              lambda: self._goto_tab(self.court_colors_tab)),
             ("💾", "Saves", "Unlock mascots, jerseys, logos, balls, and trails.",
@@ -1723,6 +1763,8 @@ class ModManagerApp(tk.Tk):
             self.mesh_frame.load()
         elif self.team_frame is not None and current is getattr(self, "teams_tab", None):
             self.team_frame.load(silent=True)
+        elif getattr(self, "camera_frame", None) is not None and current is getattr(self, "camera_tab", None):
+            self.camera_frame.load(silent=True)
         elif current is getattr(self, "floor_patterns_tab", None):
             self.after(50, self._open_floor_patterns_dialog)
         elif current is getattr(self, "sliders_tab", None):
@@ -1870,6 +1912,12 @@ class ModManagerApp(tk.Tk):
             if getattr(self, "team_frame", None) is not None:
                 try:
                     self.team_frame.set_game_path(self.cfg["game_data_path"])
+                except Exception:
+                    pass
+            # Camera tab, likewise, holds the path it was built with.
+            if getattr(self, "camera_frame", None) is not None:
+                try:
+                    self.camera_frame.set_game_path(self.cfg["game_data_path"])
                 except Exception:
                     pass
             # Meshes tab keeps its own list and mesh_mods.json, both of which are
