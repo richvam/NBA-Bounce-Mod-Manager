@@ -3,7 +3,7 @@ using BepInEx; using HarmonyLib; using UnityEngine; using UnityEngine.SceneManag
 // Bounce Roster: custom players from BepInEx/config/BounceRoster.csv (+ BounceRosterLooks.csv), GOAT chars in Quick Play.
 // BounceRoster.csv:      id,name,team_id,number,role,template_id      (id <= -1000; team_id = BasketTeam unique id, e.g. Boston -1)
 // BounceRosterLooks.csv: id,control,value                              (string / float / color #RRGGBB[AA])
-[BepInPlugin("richvam.bounce.roster","Bounce Roster","1.2.0")]
+[BepInPlugin("richvam.bounce.roster","Bounce Roster","1.2.1")]
 public class BounceRoster : BaseUnityPlugin {
   const BindingFlags BF=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
   const int GOAT=0x100;
@@ -23,13 +23,13 @@ public class BounceRoster : BaseUnityPlugin {
     try{ var tm=Resources.FindObjectsOfTypeAll(typeof(MonoBehaviour)).FirstOrDefault(o=>o.GetType().Name=="BasketTeamManager"&&((Component)o).gameObject.scene.IsValid()); if(tm==null)return;
       var teams=new List<object>(); var dict=F(tm,"m_dTeams") as IDictionary; if(dict!=null) foreach(var v in dict.Values) teams.Add(v);
       foreach(var ln in new[]{"m_aoBundledTeams"}){ var l=F(tm,ln) as IEnumerable; if(l!=null) foreach(var c in l){ var t=F(c,"m_oTeam"); if(t!=null&&!teams.Contains(t)) teams.Add(t); } }
-      if(teams.Count==0)return; int changed=0;
+      if(teams.Count==0)return; int changed=0,kept=0;
       foreach(var t in teams){ var data=F(t,"m_oData"); if(data==null)continue; int tid=Convert.ToInt32(F(data,"m_iTeamUniqueId")??F(t,"m_iTeamUniqueId"));
         var starters=Roster.Values.Where(e=>e.team==tid&&e.role.StartsWith("start",StringComparison.OrdinalIgnoreCase)).OrderByDescending(e=>e.id).Select(e=>e.id).ToList(); if(starters.Count==0)continue;
         var mem=F(data,"m_aoMembers") as IList; if(mem==null)continue; int k=0;
         for(int i=0;i<mem.Count&&i<3&&k<starters.Count;i++){ var m=mem[i]; int cur=Convert.ToInt32(F(m,"m_iAvatarUniqueId"));
-          if(cur>-1000&&cur!=tid){ S(m,"m_iAvatarUniqueId",starters[k]); changed++; } k++; } }
-      defaultsDone=true; L.LogInfo("Team defaults: set "+changed+" slots to roster starters across "+teams.Count+" teams");
+          if(cur>-1000&&cur!=tid){ S(m,"m_iAvatarUniqueId",starters[k]); changed++; } else kept++; k++; } }
+      defaultsDone=true; L.LogInfo("Team defaults: set "+changed+" slots to roster starters, "+kept+" already custom or mascot (kept), across "+teams.Count+" teams");
     }catch(Exception e){ defaultsDone=true; L.LogError("Team defaults: "+e); } }
   static List<string[]> Csv(string f){ var p=Path.Combine(Dir,f); var r=new List<string[]>(); if(!File.Exists(p))return r;
     foreach(var line in File.ReadAllLines(p,Encoding.UTF8).Skip(1)){ if(line.Trim().Length==0)continue; r.Add(SplitCsv(line)); } return r; }
