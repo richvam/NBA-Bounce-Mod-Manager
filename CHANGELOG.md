@@ -4,6 +4,11 @@
 
 ### What's New
 
+- **New Roster, Avatar and Accessory tabs (optional BepInEx loader).** Add
+  custom players to any team, with 1-10 ratings, height and weight, a full
+  look editor with a live head preview, accessories and limb colours, and
+  NBA-style name-and-number jerseys. GOAT characters can be picked in Quick
+  Play. Install, disable or uninstall the loader from the Roster tab.
 - **New Full Courts tab: one picture for a team's whole floor.** Wood,
   apron, keys, lines and logos all come from your image. Start from the
   exported template or any court image; the app finds the court lines, and
