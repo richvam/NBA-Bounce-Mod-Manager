@@ -51,21 +51,25 @@ ID_BY_TEAM = {n: i for i, n in TEAM_BY_ID.items()}
 
 # ----------------------------------------------------------------- loader
 class RosterLoader(rm.Loader):
-    """The ratings Loader plus the BounceRoster plugin (both dlls ship in loader/)."""
-    ROSTER_DLL = "BounceRoster.dll"
+    """The ratings Loader plus the BounceRoster and BounceJersey plugins (all dlls ship in loader/)."""
+    EXTRA_DLLS = ("BounceRoster.dll", "BounceJersey.dll")
 
     def __init__(self, root):
         super().__init__(root)
-        self.plugin_r = os.path.join(self.bep, "plugins", self.ROSTER_DLL)
-        self.dll_r = os.path.join(rm.LOADER_DIR, self.ROSTER_DLL)
+        self.extras = [(os.path.join(rm.LOADER_DIR, n), os.path.join(self.bep, "plugins", n))
+                       for n in self.EXTRA_DLLS]
+        self.dll_r, self.plugin_r = self.extras[0]
 
     def plugin_state(self):
         states = [super().plugin_state()]
-        if not os.path.isfile(self.plugin_r):
-            states.append("missing")
-        else:
+        for src, dst in self.extras:
+            if not os.path.isfile(src):
+                continue
+            if not os.path.isfile(dst):
+                states.append("missing")
+                continue
             try:
-                if os.path.isfile(self.dll_r) and rm._sha(self.plugin_r) != rm._sha(self.dll_r):
+                if rm._sha(dst) != rm._sha(src):
                     states.append("outdated")
             except OSError:
                 pass
@@ -74,18 +78,19 @@ class RosterLoader(rm.Loader):
                 return s
         return "installed"
 
-    def _copy_roster(self):
-        if os.path.isfile(self.dll_r):
-            os.makedirs(os.path.dirname(self.plugin_r), exist_ok=True)
-            shutil.copy2(self.dll_r, self.plugin_r)
+    def _copy_extras(self):
+        for src, dst in self.extras:
+            if os.path.isfile(src):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
 
     def install(self):
         super().install()
-        self._copy_roster()
+        self._copy_extras()
 
     def update_plugin(self):
         super().update_plugin()
-        self._copy_roster()
+        self._copy_extras()
 
 
 # ---------------------------------------------------------------- helpers

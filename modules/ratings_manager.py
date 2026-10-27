@@ -142,10 +142,17 @@ class Loader:
     def uninstall(self) -> str:
         """Remove the loader. Returns the path of the CSV backup ('' if none)."""
         backup = ""
-        if os.path.isfile(self.csv):
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        cfg = os.path.dirname(self.csv)
+        # Every Bounce*.csv (ratings, roster, looks, bodies, jerseys) goes with BepInEx.
+        names = sorted(n for n in (os.listdir(cfg) if os.path.isdir(cfg) else ())
+                       if n.startswith("Bounce") and n.lower().endswith(".csv"))
+        for n in names:
             os.makedirs(BACKUP_DIR, exist_ok=True)
-            backup = os.path.join(BACKUP_DIR, "BounceRatings-" + time.strftime("%Y%m%d-%H%M%S") + ".csv")
-            shutil.copy2(self.csv, backup)
+            dst = os.path.join(BACKUP_DIR, n[:-4] + "-" + stamp + ".csv")
+            shutil.copy2(os.path.join(cfg, n), dst)
+            if n == os.path.basename(self.csv) or not backup:
+                backup = dst
         for n in ROOT_FILES:
             p = os.path.join(self.root, n)
             if os.path.isfile(p):
