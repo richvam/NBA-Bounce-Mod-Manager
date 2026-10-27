@@ -118,6 +118,7 @@ MAX_ROWS = 8
 TEMPLATE_SPAN = (38.4, 19.2)
 CENTRE_CIRCLE_M = 1.83
 DECAL_CIRCLE_FRACTION = 1 / 3.16    # centre circle / centre-logo decal width, measured in game
+MENU_MARGIN = 1.35                  # menu sprite = logo square x this, centred
 
 # eCourtMaterialParts
 PART_PARQUET, PART_LINES = 1, 2
@@ -133,7 +134,7 @@ STRIP_PREFIX = "txt_bounce_court_"
 STRIP_SIZE = (2048, 256)
 STRIP_BIG = (0, 0, 1580, 256)          # the long team name
 STRIP_SMALL = (1600, 0, 2040, 118)     # the stacked name above the NBA logo
-LOGO_SOURCES = ("court", "file")
+LOGO_SOURCES = ("court", "game", "file")
 
 DXT1_2048x1024 = 1398120
 DXT5_1024 = 1398128
@@ -315,19 +316,44 @@ def atlas_mapping(tiling, offset, row, rows):
     return (tiling[0], tiling[1] / rows), (offset[0], (offset[1] + rows - 1 - row) / rows)
 
 
-def cut_centre_logo(img, rect, scale=1.0):
-    """The centre circle of a court image as a round RGBA logo."""
+def cut_centre_logo(img, rect, scale=1.0, key_floor=True):
+    """A square around the court's centre, `scale` centre-circle radii from
+    the middle, as RGBA. With key_floor the floor around the logo -- whatever
+    colour fills the square's edge -- is made transparent: on the court the
+    painted floor shows through unchanged, and in the menus the logo has no
+    wood behind it. The square is never trimmed, so it stays aligned."""
     x0, y0, x1, y1 = rect
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     r = CENTRE_CIRCLE_M * scale * (x1 - x0) / COURT_LEN
     box = tuple(int(round(v)) for v in (cx - r, cy - r, cx + r, cy + r))
     crop = img.convert("RGBA").crop(box)
-    n = crop.size[0]
-    yy, xx = np.mgrid[0:crop.size[1], 0:n]
-    dist = np.hypot(xx - (n - 1) / 2, yy - (crop.size[1] - 1) / 2)
-    alpha = np.clip((n / 2 - dist) / 2.0, 0, 1) * 255
     a = np.asarray(crop).copy()
-    a[..., 3] = (a[..., 3] * (alpha / 255)).astype(np.uint8)
+    h, w = a.shape[:2]
+    if key_floor and h > 8 and w > 8:
+        from PIL import ImageFilter
+        rgb = a[..., :3].astype(np.int16)
+        # The floor colour comes from the whole court (mostly wood), not the
+        # square's edge, which a big logo can fill.
+        court = np.asarray(img.convert("RGB").crop(tuple(int(v) for v in rect))
+                           .resize((200, 100))).reshape(-1, 3).astype(np.int16)
+        floor = np.median(court, axis=0)
+        near = np.abs(court - floor).max(axis=1)
+        spread = np.percentile(near[near < 80], 85) if (near < 80).any() else 20
+        d = np.abs(rgb - floor).max(axis=2)
+        lo = max(24.0, spread + 10)
+        alpha = np.clip((d - lo) / 30.0, 0, 1)
+        # Court lines (centre circle, halfway line) are thin: an opening the
+        # width of a line removes them and leaves the logo's solid shapes.
+        px_per_m = (rect[2] - rect[0]) / COURT_LEN       # court lines are ~5 cm
+        k = max(3, int(round(px_per_m * 0.09)) | 1)
+        m = Image.fromarray((alpha * 255).astype(np.uint8))
+        m = m.filter(ImageFilter.MinFilter(k)).filter(ImageFilter.MaxFilter(k))
+        alpha = np.minimum(alpha, np.asarray(m) / 255.0)
+    else:
+        yy, xx = np.mgrid[0:h, 0:w]
+        dist = np.hypot(xx - (w - 1) / 2, yy - (h - 1) / 2)
+        alpha = np.clip((w / 2 - dist) / 2.0, 0, 1)
+    a[..., 3] = (a[..., 3] * alpha).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
 
 
@@ -686,7 +712,7 @@ def discover(game_path):
                 continue
             lst = entry["logos"].setdefault(v, [])
             if all(x["texture_pid"] != tpid for x in lst):
-                lst.append({"sprite": sname, "texture_pid": tpid,
+                lst.append({"sprite": sname, "sprite_pid": spid, "texture_pid": tpid,
                             "texture": tex_names.get(tpid, str(tpid))})
             tex_users.setdefault(tpid, set()).add(token)
     for token, e in courts.items():
@@ -818,30 +844,156 @@ def strip_image_for(cfg, variant, original=None):
     return build_strip(text, original)
 
 
-def logo_image_for(team, cfg, variant, size):
-    """RGBA logo for a variant per its mode, or None for 'keep'."""
+def logo_scale(cfg, variant):
+    """Fraction of the logo texture (and of the centre decal) the logo fills."""
+    lc = cfg.get("logos", {}).get(variant) or {}
+    return max(0.05, min(1.0, float(lc.get("scale", DECAL_CIRCLE_FRACTION))))
+
+
+def logo_region(size, scale):
+    """(x, y, w, h) of the centred square the logo occupies, in texture pixels
+    measured from the bottom-left (sprite coordinates)."""
+    side = max(1, round(min(size) * scale))
+    return ((size[0] - side) / 2, (size[1] - side) / 2, float(side), float(side))
+
+
+def logo_image_for(team, cfg, variant, size, game_logo=None):
+    """RGBA logo for a variant per its mode, or None for 'keep'.
+
+    Everything goes into a centred square whose size is the variant's logo
+    scale. The centre decal draws the whole texture, so on the floor that
+    square lands on the same spot whatever the scale; the menus show just the
+    square (see _sprite_to_region). `game_logo` is the variant's own logo, for
+    the "game" source."""
     lc = cfg.get("logos", {}).get(variant) or {"mode": "keep"}
     mode = lc.get("mode", "keep")
     if mode == "keep":
         return None
     if mode == "hide":
         return Image.new("RGBA", size, (0, 0, 0, 0))
-    if lc.get("source") == "file" and lc.get("image") and os.path.isfile(lc["image"]):
+    scale = logo_scale(cfg, variant)
+    source = lc.get("source", "court")
+    if source == "file" and lc.get("image") and os.path.isfile(lc["image"]):
         logo = Image.open(lc["image"])
+    elif source == "game":
+        if game_logo is None:
+            return None
+        logo = game_logo.convert("RGBA")
+        bbox = logo.getchannel("A").getbbox()
+        logo = logo.crop(bbox) if bbox else logo
     else:
         vc = variant_picture(cfg, variant)
         if not vc:
             return None
-        logo = cut_centre_logo(Image.open(vc["image"]), tuple(vc["rect"]))
-    # The centre decal draws the whole texture about 3.2x the centre circle's
-    # width, so the default scale puts the logo at the circle's size: a cut
-    # from the court then sits exactly over the logo painted in the picture.
-    scale = max(0.05, min(1.0, float(lc.get("scale", DECAL_CIRCLE_FRACTION))))
-    inner = tuple(max(1, round(v * scale)) for v in size)
+        # The decal draws the whole texture about 3.16x the centre circle's
+        # width. Cutting the picture in proportion to the scale keeps the cut
+        # exactly on top of what's painted there: 32% = the centre circle,
+        # larger takes in a logo that spills past it.
+        logo = cut_centre_logo(Image.open(vc["image"]), tuple(vc["rect"]),
+                               scale / DECAL_CIRCLE_FRACTION)
+    x, y, w, h = logo_region(size, scale)
     canvas = Image.new("RGBA", size, (0, 0, 0, 0))
-    cut = fit_logo(logo, inner)
-    canvas.paste(cut, ((size[0] - inner[0]) // 2, (size[1] - inner[1]) // 2), cut)
+    cut = fit_logo(logo, (int(w), int(h)))
+    canvas.paste(cut, (int(x), int(size[1] - y - h)), cut)
     return canvas
+
+
+def _sprite_to_region(d, tex_size, region):
+    """Point a logo Sprite at just `region` of its texture, in place: rect,
+    texture rect and a full-rect quad mesh. The menus then show the logo at
+    full size while the court decal still draws the whole texture. (The
+    shipped sprites are Tight crops around the original artwork, which is what
+    clipped a replaced logo in the menus.)"""
+    x, y, w, h = region
+    tw, th = tex_size
+    d["m_Rect"] = {"x": x, "y": y, "width": w, "height": h}
+    rd = d["m_RD"]
+    rd["textureRect"] = {"x": x, "y": y, "width": w, "height": h}
+    rd["textureRectOffset"] = {"x": 0.0, "y": 0.0}
+    rd["settingsRaw"] = int(rd["settingsRaw"]) & ~64        # Tight -> FullRect
+    ppu = float(d["m_PixelsToUnits"])
+    px, py = float(d["m_Pivot"]["x"]), float(d["m_Pivot"]["y"])
+    rd["uvTransform"] = {"x": ppu, "y": w * px, "z": ppu, "w": h * py}
+    vd = rd["m_VertexData"]
+    n = int(vd["m_VertexCount"])
+    chans = vd["m_Channels"]
+    strides = {}
+    for ch in chans:
+        if int(ch["dimension"]):
+            strides[int(ch["stream"])] = strides.get(int(ch["stream"]), 0) + int(ch["dimension"]) * 4
+    offs, cur = {}, 0
+    for stream in sorted(strides):
+        offs[stream] = cur
+        cur = (cur + n * strides[stream] + 15) // 16 * 16
+    pos, uv = chans[0], chans[4]
+    raw = bytearray(vd["m_DataSize"])
+    left, right = -px * w / ppu, (1 - px) * w / ppu
+    bottom, top = -py * h / ppu, (1 - py) * h / ppu
+    u0, u1, v0, v1 = x / tw, (x + w) / tw, y / th, (y + h) / th
+    corners = ((left, bottom, u0, v0), (right, bottom, u1, v0),
+               (right, top, u1, v1), (left, top, u0, v1))
+    ps, pst = offs[int(pos["stream"])], strides[int(pos["stream"])]
+    us, ust = offs[int(uv["stream"])], strides[int(uv["stream"])]
+    for i in range(n):
+        cx, cy, u, v = corners[i] if i < 4 else corners[0]
+        struct.pack_into("<3f", raw, ps + i * pst, cx, cy, 0.0)
+        struct.pack_into("<2f", raw, us + i * ust, u, v)
+    vd["m_DataSize"] = bytes(raw)
+    idx = bytearray(bytes(rd["m_IndexBuffer"]))
+    for i in range(len(idx) // 2):
+        struct.pack_into("<H", idx, i * 2, (0, 1, 2, 0, 2, 3)[i] if i < 6 else 0)
+    rd["m_IndexBuffer"] = list(idx)
+
+
+def _sprite_snapshot(d):
+    import base64
+    rd = d["m_RD"]
+    return {"m_Rect": dict(d["m_Rect"]), "textureRect": dict(rd["textureRect"]),
+            "textureRectOffset": dict(rd["textureRectOffset"]),
+            "settingsRaw": int(rd["settingsRaw"]), "uvTransform": dict(rd["uvTransform"]),
+            "vertices": base64.b64encode(bytes(rd["m_VertexData"]["m_DataSize"])).decode(),
+            "indices": base64.b64encode(bytes(rd["m_IndexBuffer"])).decode()}
+
+
+def _sprite_restore(d, snap):
+    import base64
+    rd = d["m_RD"]
+    d["m_Rect"] = dict(snap["m_Rect"])
+    for k in ("textureRect", "textureRectOffset", "uvTransform"):
+        rd[k] = dict(snap[k])
+    rd["settingsRaw"] = snap["settingsRaw"]
+    rd["m_VertexData"]["m_DataSize"] = base64.b64decode(snap["vertices"])
+    rd["m_IndexBuffer"] = list(base64.b64decode(snap["indices"]))
+
+
+def game_logo_image(game_path, team, variant):
+    """The variant's own logo as the game ships it (its first logo texture),
+    kept in user/full_courts/<team>/ the first time it's read so it survives
+    being replaced."""
+    logos = team["logos"].get(variant) or team["logos"].get("default") or []
+    if not logos:
+        return None
+    return _original_logo(game_path, team["token"], logos[0]["texture_pid"])
+
+
+def _original_logo(game_path, token, tpid):
+    """A logo texture's shipped pixels, cached as a PNG. Read from the court
+    file's .original_backup when there is one: its stream offsets still point
+    at the original pixels, since the .resS is only ever appended to."""
+    png = os.path.join(team_dir(token), f"logo_original_{tpid}.png")
+    if os.path.isfile(png):
+        return Image.open(png)
+    path = _court_path(game_path)
+    src = path + ORIGINAL_BACKUP if os.path.exists(path + ORIGINAL_BACKUP) else path
+    env = UnityPy.load(src)
+    try:
+        o = next((o for o in env.objects if o.path_id == tpid), None)
+        img = o.read().image if o is not None else None
+    finally:
+        tm.close_env(env)
+    if img is not None:
+        img.save(png)
+    return img
 
 
 # ===========================================================================
@@ -1124,10 +1276,32 @@ def _write_team(game_path, team, cfg, tstate, ress_reset=None, progress=None):
                 continue               # not streamed: can't be replaced in place
             originals["logos"][key] = _texture_header(d)
         orig = originals["logos"][key]
-        img = logo_image_for(team, cfg, v, (orig["m_Width"], orig["m_Height"]))
+        size = (orig["m_Width"], orig["m_Height"])
+        game_logo = None
+        if (cfg.get("logos", {}).get(v) or {}).get("source") == "game":
+            game_logo = _original_logo(game_path, team["token"], tpid)
+        img = logo_image_for(team, cfg, v, size, game_logo=game_logo)
+        sprite_pids = [x["sprite_pid"] for x in team["logos"][v] if x["texture_pid"] == tpid]
         if img is None:
             edits[tpid] = lambda d, h=orig: _set_texture_header(d, h)
+            for sp in sprite_pids:
+                snap = originals.get("sprites", {}).get(str(sp))
+                if snap:
+                    edits[sp] = lambda d, s=snap: _sprite_restore(d, s)
             continue
+        if sprite_pids:
+            sprites = _read_objects(path, set(sprite_pids))
+            mode = (cfg.get("logos", {}).get(v) or {}).get("mode")
+            # The menus scale a logo up (TeamLogo.m_vLogoScale, ~1.4-2.2), so
+            # the sprite gets a margin around the logo's square; the pixels,
+            # and so the court alignment, don't move.
+            region = (logo_region(size, min(1.0, logo_scale(cfg, v) * MENU_MARGIN))
+                      if mode == "replace"
+                      else (0.0, 0.0, float(size[0]), float(size[1])))
+            for sp in sprite_pids:
+                originals.setdefault("sprites", {}).setdefault(
+                    str(sp), _sprite_snapshot(sprites[sp]))
+                edits[sp] = lambda d, r=region, z=size: _sprite_to_region(d, z, r)
         ldata, lmips = mipchain(img, TextureFormat.DXT5)
         lat = _append_pixels(_ress_for(path, d), ldata, ress_reset)
         lh = {"m_Width": orig["m_Width"], "m_Height": orig["m_Height"],
@@ -1273,6 +1447,8 @@ def revert(game_path, token, progress=None):
             edits[team["materials"][role]] = lambda d, s=mats[role]: _material_restore(d, s)
     for key, h in originals.get("logos", {}).items():
         edits[int(key)] = lambda d, h=h: _set_texture_header(d, h)
+    for key, snap in originals.get("sprites", {}).items():
+        edits[int(key)] = lambda d, s=snap: _sprite_restore(d, s)
     if edits:
         _patch_objects(path, edits)
     strips = {int(k): v["header"] for k, v in originals.get("strips", {}).items()}

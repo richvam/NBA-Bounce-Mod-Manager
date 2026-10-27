@@ -198,6 +198,11 @@ class FullCourtsTab(tk.Frame):
                                             style="FC.TRadiobutton",
                                             command=self._on_logo_change)
         self.src_court_rb.pack(anchor="w")
+        self.src_game_rb = ttk.Radiobutton(src, text="with the game's own logo",
+                                           value="game", variable=self.logo_source,
+                                           style="FC.TRadiobutton",
+                                           command=self._on_logo_change)
+        self.src_game_rb.pack(anchor="w")
         self.src_file_rb = ttk.Radiobutton(src, text="with an image file",
                                            value="file", variable=self.logo_source,
                                            style="FC.TRadiobutton",
@@ -628,7 +633,8 @@ class FullCourtsTab(tk.Frame):
         c = self.logo_canvas
         c.delete("all")
         replace = self.logo_mode.get() == "replace"
-        for w in (self.src_court_rb, self.src_file_rb, self.scale_w, self.scale_reset):
+        for w in (self.src_court_rb, self.src_game_rb, self.src_file_rb, self.scale_w,
+                  self.scale_reset):
             w.configure(state="normal" if replace else "disabled")
         self.scale_lbl.configure(text=f"{round(self.logo_scale.get())}%")
         self.logo_btn.configure(state="normal" if (replace and self.token and not self._busy)
@@ -641,11 +647,15 @@ class FullCourtsTab(tk.Frame):
         elif self.logo_mode.get() == "keep":
             notes.append("The game draws its own logo over the centre of your picture.")
         else:
-            notes.append("Size: about 32% fills the centre circle; 100% is the game's "
-                         "full decal, about three times wider. Also shown on the "
-                         "team-select panel and the scoreboard.")
+            notes.append("Size: 32% fills the centre circle; go bigger for a logo "
+                         "that spills past it. A cut from the court always lines up "
+                         "with the logo painted in the picture. The team-select panel "
+                         "and scoreboard show the logo itself, at full size.")
             try:
-                img = fc.logo_image_for(team, self._team_cfg(), self.variant, (LOGO_PX, LOGO_PX))
+                game_logo = (fc.game_logo_image(self.game_data_path, team, self.variant)
+                             if self.logo_source.get() == "game" else None)
+                img = fc.logo_image_for(team, self._team_cfg(), self.variant,
+                                        (LOGO_PX, LOGO_PX), game_logo=game_logo)
             except Exception:
                 img = None
             if img is not None:

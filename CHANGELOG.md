@@ -17,6 +17,11 @@
   apron (one strip per court variant) is rebuilt from the text in your
   picture's apron: same words, same lettering and colours. You can also choose
   none, or keep the game's.
+- **Centre logo size slider, and menus that show the whole logo.** The size
+  slider sets how much of the court's centre is cut. The cut always lines up
+  with the logo painted in the picture, and the wood around it is removed.
+  The team-select panel and scoreboard now show the full logo, never the old
+  logo's tight crop. You can also use the game's own logo for the variant.
 - **Centre logo: replace, hide or keep.** Replace it with the court's
   centre circle or any image, per court variant. The team-select panel and
   scoreboard follow.

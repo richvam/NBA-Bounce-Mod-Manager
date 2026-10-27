@@ -277,6 +277,20 @@ logo is kept.
 goes into the texture at 1/3.16 scale, so it lands exactly on the logo painted
 in the picture. The panel and scoreboard then show it smaller.
 
+**Court logo vs menu logo.** Both come from the same texture: the centre
+decal draws the whole texture, while the team-select panel and scoreboard draw
+the logo Sprite's rectangle. The shipped sprites are *Tight* crops baked
+around the original artwork (`m_RD.textureRect`), which is what clipped a
+replaced logo in the menus ("OBCATS"). Full Courts now rewrites each replaced
+logo's Sprite (`m_Rect`, `textureRect`, mesh as one quad, FullRect) to a
+centred square around the new logo, 1.35x its size, since the menus scale
+logos up by `TeamLogo.m_vLogoScale`. The court cut is taken in proportion to
+the size slider, so it always lands on the painted logo, and the floor around
+the logo is keyed out (colour from the court's median, thin court lines
+removed with an opening the width of a painted line), so the menus show no
+wood. A "game's own logo" source places the variant's shipped logo in the
+same square instead.
+
 **Court detection.** Darker parquet (the Celtics and Nets) needed a wider
 wood colour test. Rows are measured only across the court's columns, so the
 rows through the keys and logo still count.
