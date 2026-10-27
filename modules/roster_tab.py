@@ -337,8 +337,10 @@ class RosterTab(tk.Frame):
 
     def uninstall_loader(self):
         if not messagebox.askyesno("Uninstall Loader",
-                                   "Remove BepInEx and the ratings/roster plugins from the game folder?\n\n"
-                                   "A copy of BounceRatings.csv is kept in the app's backup folder.", parent=self):
+                                   "Remove BepInEx from the game folder? This removes every BepInEx plugin "
+                                   "(including Bounce Camera) and returns the game to vanilla.\n\n"
+                                   "Copies of your Bounce*.csv files (ratings, roster, looks, bodies) are kept "
+                                   "in the app's backup folder.", parent=self):
             return
         try:
             backup = self.loader.uninstall()
@@ -347,7 +349,7 @@ class RosterTab(tk.Frame):
             return
         self.refresh_loader()
         self.load()
-        self._say("Loader removed." + (f" Ratings backed up to {backup}" if backup else ""))
+        self._say("Loader removed." + (f" CSVs backed up to {os.path.dirname(backup)}" if backup else ""))
 
     def toggle_loader(self):
         ld = self.loader
