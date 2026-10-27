@@ -827,17 +827,19 @@ def logo_image_for(team, cfg, variant, size):
     if mode == "hide":
         return Image.new("RGBA", size, (0, 0, 0, 0))
     if lc.get("source") == "file" and lc.get("image") and os.path.isfile(lc["image"]):
-        return fit_logo(Image.open(lc["image"]), size)
-    vc = variant_picture(cfg, variant)
-    if not vc:
-        return None
-    src = Image.open(vc["image"])
+        logo = Image.open(lc["image"])
+    else:
+        vc = variant_picture(cfg, variant)
+        if not vc:
+            return None
+        logo = cut_centre_logo(Image.open(vc["image"]), tuple(vc["rect"]))
     # The centre decal draws the whole texture about 3.2x the centre circle's
-    # width, so the cut goes in at that fraction: on the floor it then sits
-    # exactly over the logo painted in the picture.
-    inner = tuple(max(1, round(v * DECAL_CIRCLE_FRACTION)) for v in size)
+    # width, so the default scale puts the logo at the circle's size: a cut
+    # from the court then sits exactly over the logo painted in the picture.
+    scale = max(0.05, min(1.0, float(lc.get("scale", DECAL_CIRCLE_FRACTION))))
+    inner = tuple(max(1, round(v * scale)) for v in size)
     canvas = Image.new("RGBA", size, (0, 0, 0, 0))
-    cut = fit_logo(cut_centre_logo(src, tuple(vc["rect"])), inner)
+    cut = fit_logo(logo, inner)
     canvas.paste(cut, ((size[0] - inner[0]) // 2, (size[1] - inner[1]) // 2), cut)
     return canvas
 

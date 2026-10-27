@@ -188,11 +188,9 @@ class FullCourtsTab(tk.Frame):
         logo.pack(fill="x")
         self.logo_mode = tk.StringVar(value="replace")
         self.logo_source = tk.StringVar(value="court")
-        for val, text in (("replace", "Replace the logo"), ("hide", "Hide it"),
-                          ("keep", "Keep the game's logo")):
-            ttk.Radiobutton(logo, text=text, value=val, variable=self.logo_mode,
-                            style="FC.TRadiobutton", command=self._on_logo_change
-                            ).pack(anchor="w", padx=8, pady=(6 if val == "replace" else 0, 0))
+        ttk.Radiobutton(logo, text="Replace the logo", value="replace",
+                        variable=self.logo_mode, style="FC.TRadiobutton",
+                        command=self._on_logo_change).pack(anchor="w", padx=8, pady=(6, 0))
         src = tk.Frame(logo, bg=t["bg"])
         src.pack(fill="x", padx=24, pady=(2, 4))
         self.src_court_rb = ttk.Radiobutton(src, text="with the court's centre circle",
@@ -208,6 +206,26 @@ class FullCourtsTab(tk.Frame):
         self.logo_btn = ttk.Button(src, text="Choose Logo…", style="FC.TButton",
                                    command=self._choose_logo)
         self.logo_btn.pack(anchor="w", pady=4)
+        size_row = tk.Frame(src, bg=t["bg"])
+        size_row.pack(fill="x")
+        tk.Label(size_row, text="Size", bg=t["bg"], fg=t["text"],
+                 font=("Segoe UI", 9)).pack(side="left")
+        self.logo_scale = tk.DoubleVar(value=round(fc.DECAL_CIRCLE_FRACTION * 100))
+        self.scale_w = ttk.Scale(size_row, from_=5, to=100, variable=self.logo_scale,
+                                 orient="horizontal", length=110,
+                                 command=lambda _v: self._on_scale_drag())
+        self.scale_w.pack(side="left", padx=4)
+        self.scale_w.bind("<ButtonRelease-1>", lambda _e: self._on_scale_done())
+        self.scale_lbl = tk.Label(size_row, text="", bg=t["bg"], fg=t["muted"],
+                                  font=("Segoe UI", 8), width=4)
+        self.scale_lbl.pack(side="left")
+        self.scale_reset = ttk.Button(src, text="Fit to centre circle", style="FC.TButton",
+                                      command=self._reset_scale)
+        self.scale_reset.pack(anchor="w", pady=(2, 4))
+        for val, text in (("hide", "Hide it"), ("keep", "Keep the game's logo")):
+            ttk.Radiobutton(logo, text=text, value=val, variable=self.logo_mode,
+                            style="FC.TRadiobutton", command=self._on_logo_change
+                            ).pack(anchor="w", padx=8)
         self.logo_canvas = tk.Canvas(logo, width=LOGO_PX, height=LOGO_PX, bg=t["panel"],
                                      highlightthickness=0)
         self.logo_canvas.pack(pady=4)
@@ -559,7 +577,25 @@ class FullCourtsTab(tk.Frame):
         lc = self._logo_cfg()
         self.logo_mode.set(lc.get("mode", "replace"))
         self.logo_source.set(lc.get("source", "court"))
+        self.logo_scale.set(round(float(lc.get("scale", fc.DECAL_CIRCLE_FRACTION)) * 100))
         self._draw_logo()
+
+    def _on_scale_drag(self):
+        """Live preview while dragging; saved on release."""
+        if not self.token:
+            return
+        lc = self._team_cfg(create=True).setdefault("logos", {}).setdefault(self.variant, {})
+        lc["scale"] = round(self.logo_scale.get()) / 100
+        self._draw_logo()
+
+    def _on_scale_done(self):
+        self._on_scale_drag()
+        if self.token:
+            self._save()
+
+    def _reset_scale(self):
+        self.logo_scale.set(round(fc.DECAL_CIRCLE_FRACTION * 100))
+        self._on_scale_done()
 
     def _on_logo_change(self):
         if not self.token:
@@ -592,8 +628,9 @@ class FullCourtsTab(tk.Frame):
         c = self.logo_canvas
         c.delete("all")
         replace = self.logo_mode.get() == "replace"
-        for w in (self.src_court_rb, self.src_file_rb):
+        for w in (self.src_court_rb, self.src_file_rb, self.scale_w, self.scale_reset):
             w.configure(state="normal" if replace else "disabled")
+        self.scale_lbl.configure(text=f"{round(self.logo_scale.get())}%")
         self.logo_btn.configure(state="normal" if (replace and self.token and not self._busy)
                                 else "disabled")
         team = self.courts.get(self.token) if self.token else None
@@ -604,7 +641,9 @@ class FullCourtsTab(tk.Frame):
         elif self.logo_mode.get() == "keep":
             notes.append("The game draws its own logo over the centre of your picture.")
         else:
-            notes.append("Also shown on the team-select panel and the scoreboard.")
+            notes.append("Size: about 32% fills the centre circle; 100% is the game's "
+                         "full decal, about three times wider. Also shown on the "
+                         "team-select panel and the scoreboard.")
             try:
                 img = fc.logo_image_for(team, self._team_cfg(), self.variant, (LOGO_PX, LOGO_PX))
             except Exception:
