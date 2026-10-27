@@ -301,6 +301,16 @@ class CameraTab(tk.Frame):
                                      command=self._reapply_active)
         self.banner_btn.pack(side="right", padx=8, pady=4)
 
+        # Runtime camera plugin warning (hidden until needed)
+        self.plugin_banner = tk.Frame(self, bg=t["red"])
+        self.plugin_lbl = tk.Label(self.plugin_banner, text="", bg=t["red"], fg="#FFFFFF",
+                                   font=("Segoe UI", 9, "bold"), anchor="w",
+                                   justify="left", wraplength=900)
+        self.plugin_lbl.pack(side="left", padx=10, pady=6, fill="x", expand=True)
+        self.plugin_btn = ttk.Button(self.plugin_banner, text="Turn the plugin off",
+                                     style="Cam.TButton", command=self._disable_plugin)
+        self.plugin_btn.pack(side="right", padx=8, pady=4)
+
         body = tk.Frame(self, bg=t["bg"])
         body.pack(fill="both", expand=True, padx=12, pady=6)
         self._body = body
@@ -861,6 +871,7 @@ class CameraTab(tk.Frame):
         name = self._identify(live)
         self._show_live(name)
         self._check_banner(live, name)
+        self._check_plugin()
         if self.edit is None or not self.dirty:
             if not self._select_where(lambda e: cmgr.same_camera(e[2], live)):
                 self.listbox.selection_clear(0, "end")
@@ -912,6 +923,34 @@ class CameraTab(tk.Frame):
                 json.dump(preset, fh, indent=1, ensure_ascii=False)
         except Exception:
             pass
+
+    def _check_plugin(self):
+        """Warn when the Bounce Camera BepInEx plugin is on: it replaces the
+        match camera at runtime, so nothing written here shows in game."""
+        try:
+            info = cmgr.camera_plugin(self.game_data_path)
+        except Exception:
+            info = None
+        if info and info["enabled"]:
+            self.plugin_lbl.configure(
+                text="The Bounce Camera plugin (BepInEx) is on. It replaces the match "
+                     "camera while the game runs, so the camera chosen here won't show. "
+                     "Turn it off here (or press F8 in a match) to use these cameras.")
+            self.plugin_banner.pack(fill="x", padx=12, pady=(6, 0), before=self._body)
+        else:
+            self.plugin_banner.pack_forget()
+
+    def _disable_plugin(self):
+        try:
+            cmgr.set_camera_plugin_enabled(self.game_data_path, False)
+        except Exception as e:
+            messagebox.showerror("Camera", str(e), parent=self)
+            return
+        self._check_plugin()
+        messagebox.showinfo("Camera", "The Bounce Camera plugin is off. Restart NBA Bounce "
+                                      "for it to take effect. Its settings are kept; set "
+                                      "Enabled = true in BepInEx/config/"
+                                      f"{cmgr.PLUGIN_CFG} to turn it back on.", parent=self)
 
     def _check_banner(self, live, name):
         active = self._read_active()

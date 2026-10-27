@@ -943,6 +943,63 @@ class CameraManager:
 
 
 # ---------------------------------------------------------------------------
+# Runtime camera plugins
+# ---------------------------------------------------------------------------
+# A BepInEx plugin can replace the match camera while the game runs (the
+# "Bounce Camera" plugin patches bounce.GameplayCamera), which overrides
+# whatever this tab writes into the level file.
+PLUGIN_DLL = "BounceCamera.dll"
+PLUGIN_CFG = "richvam.bounce.camera.cfg"
+
+
+def _game_root(game_data_path):
+    return os.path.dirname(os.path.normpath(game_data_path))
+
+
+def camera_plugin(game_data_path):
+    """{"installed", "enabled", "cfg"} for the Bounce Camera plugin, or None
+    when it isn't installed."""
+    root = _game_root(game_data_path)
+    dll = os.path.join(root, "BepInEx", "plugins", PLUGIN_DLL)
+    if not os.path.isfile(dll):
+        return None
+    cfg = os.path.join(root, "BepInEx", "config", PLUGIN_CFG)
+    enabled = True                      # the plugin's own default
+    if os.path.isfile(cfg):
+        section = None
+        with open(cfg, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("["):
+                    section = line.strip("[]")
+                elif section == "General" and line.split("=")[0].strip() == "Enabled":
+                    enabled = line.split("=", 1)[1].strip().lower() == "true"
+    return {"installed": True, "enabled": enabled, "cfg": cfg}
+
+
+def set_camera_plugin_enabled(game_data_path, enabled):
+    """Flip the plugin's [General] Enabled setting (the game must be restarted).
+    Only that one line changes; the plugin and its tuning stay."""
+    info = camera_plugin(game_data_path)
+    if info is None or not os.path.isfile(info["cfg"]):
+        raise CameraError("The Bounce Camera plugin's settings file wasn't found.")
+    with open(info["cfg"], encoding="utf-8") as fh:
+        lines = fh.readlines()
+    section, done = None, False
+    for i, line in enumerate(lines):
+        t = line.strip()
+        if t.startswith("["):
+            section = t.strip("[]")
+        elif section == "General" and t.split("=")[0].strip() == "Enabled":
+            lines[i] = f"Enabled = {'true' if enabled else 'false'}\n"
+            done = True
+    if not done:
+        raise CameraError("The plugin's settings have no [General] Enabled line.")
+    with open(info["cfg"], "w", encoding="utf-8") as fh:
+        fh.writelines(lines)
+
+
+# ---------------------------------------------------------------------------
 # User preset library (user/camera_presets/*.bouncecam)
 # ---------------------------------------------------------------------------
 class PresetLibrary:
