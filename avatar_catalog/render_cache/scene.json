@@ -1,0 +1,3009 @@
+{
+"source": "level0 SuperAvatar + avatarHeadMaster / char_avatar_Male headScale",
+"face_root": 4385,
+"head_root": 4702,
+"nodes": {
+"4385": {
+"name": "avatarHeadMaster",
+"parent": null,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4394,
+5696
+]
+},
+"4394": {
+"name": "baseTexture",
+"parent": 4385,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5239,
+5746,
+6178,
+4390,
+4395,
+4386,
+4387,
+4396
+],
+"mat": {
+"name": "skinBase",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": false,
+"queue": 2000
+},
+"renderer": 7086,
+"renderer_enabled": true
+},
+"5239": {
+"name": "coloring",
+"parent": 4394,
+"active": false,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "skinColoring",
+"base_color": [
+1.0,
+1.0,
+1.0,
+0.250980406999588
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7069,
+"renderer_enabled": true
+},
+"5746": {
+"name": "noseMove",
+"parent": 4394,
+"active": true,
+"p": [
+0.0,
+-0.2802000045776367,
+-0.008500000461935997
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+3871
+]
+},
+"3871": {
+"name": "noseScale",
+"parent": 5746,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+7011
+]
+},
+"7011": {
+"name": "noseShadow",
+"parent": 3871,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+0.12200000137090683,
+0.12200000137090683,
+0.12200000137090683
+],
+"children": [],
+"mat": {
+"name": "noseShadow",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7097,
+"renderer_enabled": true
+},
+"6178": {
+"name": "hairTextureHead",
+"parent": 4394,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.04800000041723251
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "hairTextureHead",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7095,
+"renderer_enabled": true
+},
+"4390": {
+"name": "rightEyeParent",
+"parent": 4394,
+"active": true,
+"p": [
+-0.07999999821186066,
+-0.20900008082389832,
+-0.3340000808238983
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+0.20000000298023224,
+0.20000000298023224,
+0.20000000298023224
+],
+"children": [
+4920
+]
+},
+"4920": {
+"name": "rightEyeContrascale",
+"parent": 4390,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5792
+]
+},
+"5792": {
+"name": "rightEyeMove",
+"parent": 4920,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+-0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6820
+]
+},
+"6820": {
+"name": "rightEyeSeparate",
+"parent": 5792,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+3790
+]
+},
+"3790": {
+"name": "rightEyeScale",
+"parent": 6820,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4972
+]
+},
+"4972": {
+"name": "rightEyeRotate",
+"parent": 3790,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4392,
+6011
+]
+},
+"4392": {
+"name": "rightEye",
+"parent": 4972,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+3827,
+5077,
+4246
+],
+"mat": {
+"name": "eye",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7084,
+"renderer_enabled": true
+},
+"3827": {
+"name": "blink",
+"parent": 4392,
+"active": false,
+"p": [
+-0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBlink",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7066,
+"renderer_enabled": true
+},
+"5077": {
+"name": "rightEyeIris",
+"parent": 4392,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.04999995231628418
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeIris",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7132,
+"renderer_enabled": true
+},
+"4246": {
+"name": "rightEyeBright",
+"parent": 4392,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.1000000536441803
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBright",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7100,
+"renderer_enabled": true
+},
+"6011": {
+"name": "rightEyeBlink",
+"parent": 4972,
+"active": false,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBlink",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7113,
+"renderer_enabled": true
+},
+"4395": {
+"name": "leftEyeParent",
+"parent": 4394,
+"active": true,
+"p": [
+0.07999999821186066,
+-0.20900008082389832,
+-0.3340000808238983
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+-0.20000000298023224,
+0.2000000774860382,
+0.2000000774860382
+],
+"children": [
+5833
+]
+},
+"5833": {
+"name": "leftEyeContrascale",
+"parent": 4395,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+-0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4805
+]
+},
+"4805": {
+"name": "leftEyeMove",
+"parent": 5833,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6323
+]
+},
+"6323": {
+"name": "leftEyeSeparate",
+"parent": 4805,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+3807
+]
+},
+"3807": {
+"name": "leftEyeScale",
+"parent": 6323,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6976
+]
+},
+"6976": {
+"name": "leftEyeRotate",
+"parent": 3807,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+1.0,
+-0.0,
+0.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4391,
+4378
+]
+},
+"4391": {
+"name": "leftEye",
+"parent": 6976,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-1.0,
+-0.0,
+0.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6977,
+5775,
+5075
+],
+"mat": {
+"name": "eye",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7083,
+"renderer_enabled": true
+},
+"6977": {
+"name": "blink",
+"parent": 4391,
+"active": false,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBlink",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7135,
+"renderer_enabled": true
+},
+"5775": {
+"name": "leftEyeIris",
+"parent": 4391,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.04999993368983269
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeIris",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7140,
+"renderer_enabled": true
+},
+"5075": {
+"name": "leftEyeBright",
+"parent": 4391,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.10000001639127731
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBright",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7110,
+"renderer_enabled": true
+},
+"4378": {
+"name": "leftEyeBlink",
+"parent": 6976,
+"active": false,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-1.0,
+-0.0,
+0.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyeBlink",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7130,
+"renderer_enabled": true
+},
+"4386": {
+"name": "rightEyebrowParent",
+"parent": 4394,
+"active": true,
+"p": [
+-0.07999999821186066,
+-0.12600000202655792,
+-0.3500000238418579
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+0.15000000596046448,
+0.15000000596046448,
+0.15000000596046448
+],
+"children": [
+6488
+]
+},
+"6488": {
+"name": "rightEyebrowContrascale",
+"parent": 4386,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5704
+]
+},
+"5704": {
+"name": "rightEyebrowMoveScale",
+"parent": 6488,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+-0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4589
+]
+},
+"4589": {
+"name": "rightEyebrowSeparate",
+"parent": 5704,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+3758
+]
+},
+"3758": {
+"name": "rightEyebrowRotate",
+"parent": 4589,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4393
+]
+},
+"4393": {
+"name": "rightEyebrow",
+"parent": 3758,
+"active": true,
+"p": [
+0.0,
+0.0,
+-0.10000000149011612
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyebrow",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7085,
+"renderer_enabled": true
+},
+"4387": {
+"name": "leftEyebrowParent",
+"parent": 4394,
+"active": true,
+"p": [
+0.07999999821186066,
+-0.12600000202655792,
+-0.3500000238418579
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+-0.15000000596046448,
+0.15000005066394806,
+0.15000005066394806
+],
+"children": [
+6718
+]
+},
+"6718": {
+"name": "leftEyebrowContrascale",
+"parent": 4387,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+-0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5723
+]
+},
+"5723": {
+"name": "leftEyebrowMoveScale",
+"parent": 6718,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5837
+]
+},
+"5837": {
+"name": "leftEyebrowSeparate",
+"parent": 5723,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6465
+]
+},
+"6465": {
+"name": "leftEyebrowRotate",
+"parent": 5837,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.0,
+1.0,
+-0.0,
+0.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4388
+]
+},
+"4388": {
+"name": "leftEyebrow",
+"parent": 6465,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.10000000149011612
+],
+"r": [
+-0.0,
+-1.0,
+-0.0,
+0.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "eyebrow",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7081,
+"renderer_enabled": true
+},
+"4396": {
+"name": "mouthParent",
+"parent": 4394,
+"active": true,
+"p": [
+0.0,
+-0.3337000012397766,
+-0.2840000092983246
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+0.15000000596046448,
+0.15000000596046448,
+0.15000000596046448
+],
+"children": [
+6302
+]
+},
+"6302": {
+"name": "mouthContrascale",
+"parent": 4396,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6714
+]
+},
+"6714": {
+"name": "mouthMoveScale",
+"parent": 6302,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+-0.7071068286895752,
+0.7071068286895752
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4508
+]
+},
+"4508": {
+"name": "mouthMoveHorizontal",
+"parent": 6714,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4389
+]
+},
+"4389": {
+"name": "mouth",
+"parent": 4508,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.09999989718198776
+],
+"r": [
+-0.0,
+-0.0,
+-0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "mouth",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": true,
+"queue": 3000
+},
+"renderer": 7082,
+"renderer_enabled": true
+},
+"5696": {
+"name": "Camera_avatarHeadMaster",
+"parent": 4385,
+"active": true,
+"p": [
+0.0,
+0.0,
+-1.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": []
+},
+"4702": {
+"name": "headScale",
+"parent": null,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+5773,
+5284,
+5097,
+4680
+]
+},
+"5773": {
+"name": "mesh_headTestNose2",
+"parent": 4702,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+-0.70710688829422,
+-0.0,
+4.656612873077393e-10,
+0.7071067690849304
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4133
+],
+"mat": {
+"name": "mat_bouncePinkSkinHead",
+"base_color": [
+0.7169811725616455,
+0.7169811725616455,
+0.7169811725616455,
+1.0
+],
+"transparent": false,
+"queue": -1
+},
+"renderer": 7120,
+"renderer_enabled": true
+},
+"4133": {
+"name": "noseMove",
+"parent": 5773,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+6746
+]
+},
+"6746": {
+"name": "noseScale",
+"parent": 4133,
+"active": true,
+"p": [
+0.0,
+-0.271699994802475,
+0.05119999870657921
+],
+"r": [
+-5.960463766996327e-08,
+-1.1102228922762585e-16,
+2.63417798684884e-09,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [
+4690
+]
+},
+"4690": {
+"name": "mesh_avatar_nose3D",
+"parent": 6746,
+"active": true,
+"p": [
+0.0,
+0.271699994802475,
+-0.05119990557432175
+],
+"r": [
+7.105425663535107e-15,
+9.878159401566222e-10,
+4.280538590251126e-09,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "mat_bouncePinkSkinHead",
+"base_color": [
+0.7169811725616455,
+0.7169811725616455,
+0.7169811725616455,
+1.0
+],
+"transparent": false,
+"queue": -1
+},
+"renderer": 7063,
+"renderer_enabled": true
+},
+"5284": {
+"name": "mesh_hat",
+"parent": 4702,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "mat_bounceHat",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": false,
+"queue": -1
+},
+"renderer": 7115,
+"renderer_enabled": true
+},
+"5097": {
+"name": "mesh_googles",
+"parent": 4702,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "mat_bounceGoggles",
+"base_color": [
+1.0,
+1.0,
+1.0,
+1.0
+],
+"transparent": false,
+"queue": -1
+},
+"renderer": 7102,
+"renderer_enabled": true
+},
+"4680": {
+"name": "mesh_hair",
+"parent": 4702,
+"active": true,
+"p": [
+0.0,
+0.0,
+0.0
+],
+"r": [
+0.0,
+0.0,
+0.0,
+1.0
+],
+"s": [
+1.0,
+1.0,
+1.0
+],
+"children": [],
+"mat": {
+"name": "mat_bounceHair",
+"base_color": [
+0.9811320900917053,
+0.8070048689842224,
+0.10644359886646271,
+1.0
+],
+"transparent": false,
+"queue": -1
+},
+"renderer": 7104,
+"renderer_enabled": true
+}
+},
+"camera": {
+"p": [
+0.0,
+0.0,
+-1.0
+],
+"ortho_size": 0.5
+},
+"controls": [
+{
+"name": "skinTextureHead",
+"type": 4,
+"objs": [
+4394
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "skinColor",
+"type": 5,
+"objs": [
+4394
+],
+"str": "_BaseColor",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hairColor",
+"type": 5,
+"objs": [
+4680,
+6178
+],
+"str": "_BaseColor",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "gogglesMesh",
+"type": 3,
+"objs": [
+5097
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "gogglesTexture",
+"type": 4,
+"objs": [
+5097
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hatMesh",
+"type": 3,
+"objs": [
+5284
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hatTexture",
+"type": 4,
+"objs": [
+5284
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hairMesh",
+"type": 3,
+"objs": [
+4680
+],
+"str": "_BaseColor",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hairTexture",
+"type": 4,
+"objs": [
+4680
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hairTextureHead",
+"type": 4,
+"objs": [
+6178
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "headSizeX",
+"type": 0,
+"objs": [
+4702
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+1.0
+],
+"v3": [
+1.0,
+0.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "headSizeY",
+"type": 0,
+"objs": [
+4702
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+1.0
+],
+"v3": [
+0.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesTexture",
+"type": 4,
+"objs": [
+4392,
+4391
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesBrightTexture",
+"type": 4,
+"objs": [
+4246,
+5075
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesIrisTexture",
+"type": 4,
+"objs": [
+5077,
+5775
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesScale",
+"type": 0,
+"objs": [
+3790,
+3807
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+1.7000000476837158
+],
+"v3": [
+1.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesSeparate",
+"type": 7,
+"objs": [
+6820,
+6323
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.029999999329447746,
+0.014999999664723873
+],
+"v3": [
+1.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesMoveVertical",
+"type": 7,
+"objs": [
+4972,
+6976
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.029999999329447746,
+0.029999999329447746
+],
+"v3": [
+0.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesRotate",
+"type": 6,
+"objs": [
+4972,
+6976
+],
+"str": "",
+"ints": [],
+"v2": [
+15.0,
+-15.0
+],
+"v3": [
+0.0,
+0.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "mouthTexture",
+"type": 4,
+"objs": [
+4389
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "mouthScale",
+"type": 0,
+"objs": [
+6714
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+1.7000000476837158
+],
+"v3": [
+1.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "mouthRotate",
+"type": 6,
+"objs": [
+4389
+],
+"str": "",
+"ints": [],
+"v2": [
+-15.0,
+15.0
+],
+"v3": [
+0.0,
+0.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "mouthRotate",
+"type": 7,
+"objs": [
+4508
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.019999999552965164,
+0.019999999552965164
+],
+"v3": [
+1.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "mouthMoveVertical",
+"type": 7,
+"objs": [
+6714
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.05000000074505806,
+0.05000000074505806
+],
+"v3": [
+0.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsTexture",
+"type": 4,
+"objs": [
+4393,
+4388
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsColor",
+"type": 5,
+"objs": [
+4393,
+4388
+],
+"str": "_BaseColor",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsSeparate",
+"type": 7,
+"objs": [
+4589,
+5837
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.029999999329447746,
+0.014999999664723873
+],
+"v3": [
+1.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsMoveVertical",
+"type": 7,
+"objs": [
+5704,
+5723
+],
+"str": "",
+"ints": [],
+"v2": [
+-0.029999999329447746,
+0.029999999329447746
+],
+"v3": [
+0.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsRotate",
+"type": 6,
+"objs": [
+3758,
+6465
+],
+"str": "",
+"ints": [],
+"v2": [
+15.0,
+-15.0
+],
+"v3": [
+0.0,
+0.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "eyebrowsScale",
+"type": 0,
+"objs": [
+5704,
+5723
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+2.0
+],
+"v3": [
+1.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyesColor",
+"type": 5,
+"objs": [
+5077,
+5775
+],
+"str": "_BaseColor",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "headMesh",
+"type": 3,
+"objs": [
+5773
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "noseMesh",
+"type": 3,
+"objs": [
+4690
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "noseMoveVertical",
+"type": 7,
+"objs": [
+4133
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.05000000074505806
+],
+"v3": [
+0.0,
+0.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "noseScale",
+"type": 0,
+"objs": [
+6746
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+2.5
+],
+"v3": [
+1.0,
+1.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "noseScale",
+"type": 0,
+"objs": [
+3871
+],
+"str": "",
+"ints": [],
+"v2": [
+0.800000011920929,
+2.5
+],
+"v3": [
+1.0,
+1.0,
+1.0
+],
+"counter": []
+},
+{
+"name": "noseMoveVertical",
+"type": 7,
+"objs": [
+5746
+],
+"str": "",
+"ints": [],
+"v2": [
+0.0,
+0.05000000074505806
+],
+"v3": [
+0.0,
+1.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "hairTexturePattern",
+"type": 4,
+"objs": [
+4680
+],
+"str": "_TiledTexture",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "noseShadow",
+"type": 4,
+"objs": [
+7011
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+},
+{
+"name": "eyeBlink",
+"type": 4,
+"objs": [
+6977,
+3827
+],
+"str": "_BaseMap",
+"ints": [],
+"v2": [
+0.0,
+0.0
+],
+"v3": [
+0.0,
+0.0,
+0.0
+],
+"counter": []
+}
+],
+"index": {
+"meshes": {
+"headMesh": [
+"mesh_headTestNose2",
+"mesh_headTestNose2.001",
+"mesh_headTestNose2.002",
+"mesh_headTestNose2.003",
+"mesh_headTestNose2.004",
+"mesh_headTestNose2.005",
+"mesh_headTestNose2.006"
+],
+"noseMesh": [
+"mesh_avatar_nose3D"
+],
+"hairMesh": [
+"mesh_hair_001",
+"mesh_hair_001_hat",
+"mesh_hair_002",
+"mesh_hair_002_hat",
+"mesh_hair_003",
+"mesh_hair_003_hat",
+"mesh_hair_004",
+"mesh_hair_004_hat",
+"mesh_hair_005",
+"mesh_hair_005_hat",
+"mesh_hair_006",
+"mesh_hair_006_hat",
+"mesh_hair_007",
+"mesh_hair_007_hat",
+"mesh_hair_008",
+"mesh_hair_008_hat",
+"mesh_hair_009",
+"mesh_hair_009_hat",
+"mesh_hair_010",
+"mesh_hair_010_hat",
+"mesh_hair_011",
+"mesh_hair_011_hat",
+"mesh_hair_012",
+"mesh_hair_012_hat",
+"mesh_hair_013",
+"mesh_hair_013_hat",
+"mesh_hair_014",
+"mesh_hair_014_hat",
+"mesh_hair_015",
+"mesh_hair_015_hat",
+"mesh_hair_016",
+"mesh_hair_016_hat",
+"mesh_hair_017",
+"mesh_hair_017_hat",
+"mesh_hair_018",
+"mesh_hair_018_hat",
+"mesh_hair_019",
+"mesh_hair_019_hat",
+"mesh_hair_020",
+"mesh_hair_020_hat",
+"mesh_hair_021",
+"mesh_hair_021_hat",
+"mesh_hair_022",
+"mesh_hair_022_hat",
+"mesh_hair_023",
+"mesh_hair_023_hat"
+],
+"hatMesh": [
+"mesh_hat001",
+"mesh_hat002",
+"mesh_hat003",
+"mesh_hat004",
+"mesh_hat007",
+"mesh_hat008",
+"mesh_hat009",
+"mesh_hat010",
+"mesh_hat011",
+"mesh_hat012",
+"mesh_hat013"
+],
+"gogglesMesh": [
+"mesh_goggles001",
+"mesh_goggles002",
+"mesh_goggles003",
+"mesh_goggles004",
+"mesh_goggles005",
+"mesh_goggles006",
+"mesh_goggles007"
+]
+},
+"textures": {
+"skinTextureHead": {
+"txt_skinHead_001": "skinTextureHead/txt_skinHead_001.png",
+"txt_skinHead_002": "skinTextureHead/txt_skinHead_002.png",
+"txt_skinHead_003": "skinTextureHead/txt_skinHead_003.png",
+"txt_skinHead_004": "skinTextureHead/txt_skinHead_004.png",
+"txt_skinHead_005": "skinTextureHead/txt_skinHead_005.png",
+"txt_skinHead_006": "skinTextureHead/txt_skinHead_006.png",
+"txt_skinHead_007": "skinTextureHead/txt_skinHead_007.png",
+"txt_skinHead_008": "skinTextureHead/txt_skinHead_008.png",
+"txt_skinHead_009": "skinTextureHead/txt_skinHead_009.png",
+"txt_skinHead_010": "skinTextureHead/txt_skinHead_010.png",
+"txt_skinHead_011": "skinTextureHead/txt_skinHead_011.png"
+},
+"hairTextureHead": {
+"txt_hair_001_head": "hairTextureHead/txt_hair_001_head.png",
+"txt_hair_002_head": "hairTextureHead/txt_hair_002_head.png",
+"txt_hair_003_head": "hairTextureHead/txt_hair_003_head.png",
+"txt_hair_004_head": "hairTextureHead/txt_hair_004_head.png",
+"txt_hair_005_head": "hairTextureHead/txt_hair_005_head.png",
+"txt_hair_006_head": "hairTextureHead/txt_hair_006_head.png",
+"txt_hair_007_head": "hairTextureHead/txt_hair_007_head.png",
+"txt_hair_008_head": "hairTextureHead/txt_hair_008_head.png",
+"txt_hair_009_head": "hairTextureHead/txt_hair_009_head.png",
+"txt_hair_010_head": "hairTextureHead/txt_hair_010_head.png",
+"txt_hair_011_head": "hairTextureHead/txt_hair_011_head.png",
+"txt_hair_012_head": "hairTextureHead/txt_hair_012_head.png",
+"txt_hair_013_head": "hairTextureHead/txt_hair_013_head.png",
+"txt_hair_014_head": "hairTextureHead/txt_hair_014_head.png",
+"txt_hair_015_head": "hairTextureHead/txt_hair_015_head.png",
+"txt_hair_016_head": "hairTextureHead/txt_hair_016_head.png",
+"txt_hair_017_head": "hairTextureHead/txt_hair_017_head.png",
+"txt_hair_018_head": "hairTextureHead/txt_hair_018_head.png",
+"txt_hair_019_head": "hairTextureHead/txt_hair_019_head.png",
+"txt_hair_020_head": "hairTextureHead/txt_hair_020_head.png",
+"txt_hair_021_head": "hairTextureHead/txt_hair_021_head.png",
+"txt_hair_022_head": "hairTextureHead/txt_hair_022_head.png",
+"txt_hair_023_head": "hairTextureHead/txt_hair_023_head.png",
+"txt_hair_025_head": "hairTextureHead/txt_hair_025_head.png"
+},
+"noseShadow": {
+"txt_nose_shadow_001": "noseShadow/txt_nose_shadow_001.png",
+"txt_nose_shadow_002": "noseShadow/txt_nose_shadow_002.png",
+"txt_nose_shadow_003": "noseShadow/txt_nose_shadow_003.png",
+"txt_nose_shadow_004": "noseShadow/txt_nose_shadow_004.png",
+"txt_nose_shadow_005": "noseShadow/txt_nose_shadow_005.png",
+"txt_nose_shadow_006": "noseShadow/txt_nose_shadow_006.png",
+"txt_nose_shadow_007": "noseShadow/txt_nose_shadow_007.png",
+"txt_nose_shadow_008": "noseShadow/txt_nose_shadow_008.png",
+"txt_nose_shadow_009": "noseShadow/txt_nose_shadow_009.png",
+"txt_nose_shadow_010": "noseShadow/txt_nose_shadow_010.png",
+"txt_nose_shadow_011": "noseShadow/txt_nose_shadow_011.png"
+},
+"eyesTexture": {
+"txt_eye_001_skin01": "eyesTexture/txt_eye_001_skin01.png",
+"txt_eye_001_skin02": "eyesTexture/txt_eye_001_skin02.png",
+"txt_eye_001_skin03": "eyesTexture/txt_eye_001_skin03.png",
+"txt_eye_001_skin04": "eyesTexture/txt_eye_001_skin04.png",
+"txt_eye_001_skin05": "eyesTexture/txt_eye_001_skin05.png",
+"txt_eye_001_skin06": "eyesTexture/txt_eye_001_skin06.png",
+"txt_eye_001_skin07": "eyesTexture/txt_eye_001_skin07.png",
+"txt_eye_001_skin08": "eyesTexture/txt_eye_001_skin08.png",
+"txt_eye_001_skin09": "eyesTexture/txt_eye_001_skin09.png",
+"txt_eye_001_skin10": "eyesTexture/txt_eye_001_skin10.png",
+"txt_eye_001_skin11": "eyesTexture/txt_eye_001_skin11.png",
+"txt_eye_002_skin01": "eyesTexture/txt_eye_002_skin01.png",
+"txt_eye_002_skin02": "eyesTexture/txt_eye_002_skin02.png",
+"txt_eye_002_skin03": "eyesTexture/txt_eye_002_skin03.png",
+"txt_eye_002_skin04": "eyesTexture/txt_eye_002_skin04.png",
+"txt_eye_002_skin05": "eyesTexture/txt_eye_002_skin05.png",
+"txt_eye_002_skin06": "eyesTexture/txt_eye_002_skin06.png",
+"txt_eye_002_skin07": "eyesTexture/txt_eye_002_skin07.png",
+"txt_eye_002_skin08": "eyesTexture/txt_eye_002_skin08.png",
+"txt_eye_002_skin09": "eyesTexture/txt_eye_002_skin09.png",
+"txt_eye_002_skin10": "eyesTexture/txt_eye_002_skin10.png",
+"txt_eye_002_skin11": "eyesTexture/txt_eye_002_skin11.png",
+"txt_eye_003_skin01": "eyesTexture/txt_eye_003_skin01.png",
+"txt_eye_003_skin02": "eyesTexture/txt_eye_003_skin02.png",
+"txt_eye_003_skin03": "eyesTexture/txt_eye_003_skin03.png",
+"txt_eye_003_skin04": "eyesTexture/txt_eye_003_skin04.png",
+"txt_eye_003_skin05": "eyesTexture/txt_eye_003_skin05.png",
+"txt_eye_003_skin06": "eyesTexture/txt_eye_003_skin06.png",
+"txt_eye_003_skin07": "eyesTexture/txt_eye_003_skin07.png",
+"txt_eye_003_skin08": "eyesTexture/txt_eye_003_skin08.png",
+"txt_eye_003_skin09": "eyesTexture/txt_eye_003_skin09.png",
+"txt_eye_003_skin10": "eyesTexture/txt_eye_003_skin10.png",
+"txt_eye_003_skin11": "eyesTexture/txt_eye_003_skin11.png",
+"txt_eye_004_skin01": "eyesTexture/txt_eye_004_skin01.png",
+"txt_eye_004_skin02": "eyesTexture/txt_eye_004_skin02.png",
+"txt_eye_004_skin03": "eyesTexture/txt_eye_004_skin03.png",
+"txt_eye_004_skin04": "eyesTexture/txt_eye_004_skin04.png",
+"txt_eye_004_skin05": "eyesTexture/txt_eye_004_skin05.png",
+"txt_eye_004_skin06": "eyesTexture/txt_eye_004_skin06.png",
+"txt_eye_004_skin07": "eyesTexture/txt_eye_004_skin07.png",
+"txt_eye_004_skin08": "eyesTexture/txt_eye_004_skin08.png",
+"txt_eye_004_skin09": "eyesTexture/txt_eye_004_skin09.png",
+"txt_eye_004_skin10": "eyesTexture/txt_eye_004_skin10.png",
+"txt_eye_004_skin11": "eyesTexture/txt_eye_004_skin11.png",
+"txt_eye_005_skin01": "eyesTexture/txt_eye_005_skin01.png",
+"txt_eye_005_skin02": "eyesTexture/txt_eye_005_skin02.png",
+"txt_eye_005_skin03": "eyesTexture/txt_eye_005_skin03.png",
+"txt_eye_005_skin04": "eyesTexture/txt_eye_005_skin04.png",
+"txt_eye_005_skin05": "eyesTexture/txt_eye_005_skin05.png",
+"txt_eye_005_skin06": "eyesTexture/txt_eye_005_skin06.png",
+"txt_eye_005_skin07": "eyesTexture/txt_eye_005_skin07.png",
+"txt_eye_005_skin08": "eyesTexture/txt_eye_005_skin08.png",
+"txt_eye_005_skin09": "eyesTexture/txt_eye_005_skin09.png",
+"txt_eye_005_skin10": "eyesTexture/txt_eye_005_skin10.png",
+"txt_eye_005_skin11": "eyesTexture/txt_eye_005_skin11.png",
+"txt_eye_006_skin01": "eyesTexture/txt_eye_006_skin01.png",
+"txt_eye_006_skin02": "eyesTexture/txt_eye_006_skin02.png",
+"txt_eye_006_skin03": "eyesTexture/txt_eye_006_skin03.png",
+"txt_eye_006_skin04": "eyesTexture/txt_eye_006_skin04.png",
+"txt_eye_006_skin05": "eyesTexture/txt_eye_006_skin05.png",
+"txt_eye_006_skin06": "eyesTexture/txt_eye_006_skin06.png",
+"txt_eye_006_skin07": "eyesTexture/txt_eye_006_skin07.png",
+"txt_eye_006_skin08": "eyesTexture/txt_eye_006_skin08.png",
+"txt_eye_006_skin09": "eyesTexture/txt_eye_006_skin09.png",
+"txt_eye_006_skin10": "eyesTexture/txt_eye_006_skin10.png",
+"txt_eye_006_skin11": "eyesTexture/txt_eye_006_skin11.png",
+"txt_eye_007_skin01": "eyesTexture/txt_eye_007_skin01.png",
+"txt_eye_007_skin02": "eyesTexture/txt_eye_007_skin02.png",
+"txt_eye_007_skin03": "eyesTexture/txt_eye_007_skin03.png",
+"txt_eye_007_skin04": "eyesTexture/txt_eye_007_skin04.png",
+"txt_eye_007_skin05": "eyesTexture/txt_eye_007_skin05.png",
+"txt_eye_007_skin06": "eyesTexture/txt_eye_007_skin06.png",
+"txt_eye_007_skin07": "eyesTexture/txt_eye_007_skin07.png",
+"txt_eye_007_skin08": "eyesTexture/txt_eye_007_skin08.png",
+"txt_eye_007_skin09": "eyesTexture/txt_eye_007_skin09.png",
+"txt_eye_007_skin10": "eyesTexture/txt_eye_007_skin10.png",
+"txt_eye_007_skin11": "eyesTexture/txt_eye_007_skin11.png",
+"txt_eye_008_skin01": "eyesTexture/txt_eye_008_skin01.png",
+"txt_eye_008_skin02": "eyesTexture/txt_eye_008_skin02.png",
+"txt_eye_008_skin03": "eyesTexture/txt_eye_008_skin03.png",
+"txt_eye_008_skin04": "eyesTexture/txt_eye_008_skin04.png",
+"txt_eye_008_skin05": "eyesTexture/txt_eye_008_skin05.png",
+"txt_eye_008_skin06": "eyesTexture/txt_eye_008_skin06.png",
+"txt_eye_008_skin07": "eyesTexture/txt_eye_008_skin07.png",
+"txt_eye_008_skin08": "eyesTexture/txt_eye_008_skin08.png",
+"txt_eye_008_skin09": "eyesTexture/txt_eye_008_skin09.png",
+"txt_eye_008_skin10": "eyesTexture/txt_eye_008_skin10.png",
+"txt_eye_008_skin11": "eyesTexture/txt_eye_008_skin11.png",
+"txt_eye_009_skin01": "eyesTexture/txt_eye_009_skin01.png",
+"txt_eye_009_skin02": "eyesTexture/txt_eye_009_skin02.png",
+"txt_eye_009_skin03": "eyesTexture/txt_eye_009_skin03.png",
+"txt_eye_009_skin04": "eyesTexture/txt_eye_009_skin04.png",
+"txt_eye_009_skin05": "eyesTexture/txt_eye_009_skin05.png",
+"txt_eye_009_skin06": "eyesTexture/txt_eye_009_skin06.png",
+"txt_eye_009_skin07": "eyesTexture/txt_eye_009_skin07.png",
+"txt_eye_009_skin08": "eyesTexture/txt_eye_009_skin08.png",
+"txt_eye_009_skin09": "eyesTexture/txt_eye_009_skin09.png",
+"txt_eye_009_skin10": "eyesTexture/txt_eye_009_skin10.png",
+"txt_eye_009_skin11": "eyesTexture/txt_eye_009_skin11.png",
+"txt_eye_010_skin01": "eyesTexture/txt_eye_010_skin01.png",
+"txt_eye_010_skin02": "eyesTexture/txt_eye_010_skin02.png",
+"txt_eye_010_skin03": "eyesTexture/txt_eye_010_skin03.png",
+"txt_eye_010_skin04": "eyesTexture/txt_eye_010_skin04.png",
+"txt_eye_010_skin05": "eyesTexture/txt_eye_010_skin05.png",
+"txt_eye_010_skin06": "eyesTexture/txt_eye_010_skin06.png",
+"txt_eye_010_skin07": "eyesTexture/txt_eye_010_skin07.png",
+"txt_eye_010_skin08": "eyesTexture/txt_eye_010_skin08.png",
+"txt_eye_010_skin09": "eyesTexture/txt_eye_010_skin09.png",
+"txt_eye_010_skin10": "eyesTexture/txt_eye_010_skin10.png",
+"txt_eye_010_skin11": "eyesTexture/txt_eye_010_skin11.png"
+},
+"eyesIrisTexture": {
+"txt_eye_001_iris": "eyesIrisTexture/txt_eye_001_iris.png",
+"txt_eye_002_iris": "eyesIrisTexture/txt_eye_002_iris.png",
+"txt_eye_003_iris": "eyesIrisTexture/txt_eye_003_iris.png",
+"txt_eye_004_iris": "eyesIrisTexture/txt_eye_004_iris.png",
+"txt_eye_005_iris": "eyesIrisTexture/txt_eye_005_iris.png",
+"txt_eye_006_iris": "eyesIrisTexture/txt_eye_006_iris.png",
+"txt_eye_007_iris": "eyesIrisTexture/txt_eye_007_iris.png",
+"txt_eye_008_iris": "eyesIrisTexture/txt_eye_008_iris.png",
+"txt_eye_009_iris": "eyesIrisTexture/txt_eye_009_iris.png",
+"txt_eye_010_iris": "eyesIrisTexture/txt_eye_010_iris.png"
+},
+"eyesBrightTexture": {
+"txt_eye_001_shine": "eyesBrightTexture/txt_eye_001_shine.png",
+"txt_eye_002_shine": "eyesBrightTexture/txt_eye_002_shine.png",
+"txt_eye_003_shine": "eyesBrightTexture/txt_eye_003_shine.png",
+"txt_eye_004_shine": "eyesBrightTexture/txt_eye_004_shine.png",
+"txt_eye_005_shine": "eyesBrightTexture/txt_eye_005_shine.png",
+"txt_eye_006_shine": "eyesBrightTexture/txt_eye_006_shine.png",
+"txt_eye_007_shine": "eyesBrightTexture/txt_eye_007_shine.png",
+"txt_eye_008_shine": "eyesBrightTexture/txt_eye_008_shine.png",
+"txt_eye_009_shine": "eyesBrightTexture/txt_eye_009_shine.png",
+"txt_eye_010_shine": "eyesBrightTexture/txt_eye_010_shine.png"
+},
+"eyebrowsTexture": {
+"txt_brow_001": "eyebrowsTexture/txt_brow_001.png",
+"txt_brow_0010": "eyebrowsTexture/txt_brow_0010.png",
+"txt_brow_0011": "eyebrowsTexture/txt_brow_0011.png",
+"txt_brow_0012": "eyebrowsTexture/txt_brow_0012.png",
+"txt_brow_0013": "eyebrowsTexture/txt_brow_0013.png",
+"txt_brow_0014": "eyebrowsTexture/txt_brow_0014.png",
+"txt_brow_0015": "eyebrowsTexture/txt_brow_0015.png",
+"txt_brow_0016": "eyebrowsTexture/txt_brow_0016.png",
+"txt_brow_0017": "eyebrowsTexture/txt_brow_0017.png",
+"txt_brow_0018": "eyebrowsTexture/txt_brow_0018.png",
+"txt_brow_0019": "eyebrowsTexture/txt_brow_0019.png",
+"txt_brow_002": "eyebrowsTexture/txt_brow_002.png",
+"txt_brow_0020": "eyebrowsTexture/txt_brow_0020.png",
+"txt_brow_003": "eyebrowsTexture/txt_brow_003.png",
+"txt_brow_004": "eyebrowsTexture/txt_brow_004.png",
+"txt_brow_005": "eyebrowsTexture/txt_brow_005.png",
+"txt_brow_006": "eyebrowsTexture/txt_brow_006.png",
+"txt_brow_007": "eyebrowsTexture/txt_brow_007.png",
+"txt_brow_008": "eyebrowsTexture/txt_brow_008.png",
+"txt_brow_009": "eyebrowsTexture/txt_brow_009.png"
+},
+"mouthTexture": {
+"txt_mouth_001_skin01": "mouthTexture/txt_mouth_001_skin01.png",
+"txt_mouth_001_skin02": "mouthTexture/txt_mouth_001_skin02.png",
+"txt_mouth_001_skin03": "mouthTexture/txt_mouth_001_skin03.png",
+"txt_mouth_001_skin04": "mouthTexture/txt_mouth_001_skin04.png",
+"txt_mouth_001_skin05": "mouthTexture/txt_mouth_001_skin05.png",
+"txt_mouth_001_skin06": "mouthTexture/txt_mouth_001_skin06.png",
+"txt_mouth_001_skin07": "mouthTexture/txt_mouth_001_skin07.png",
+"txt_mouth_001_skin08": "mouthTexture/txt_mouth_001_skin08.png",
+"txt_mouth_001_skin09": "mouthTexture/txt_mouth_001_skin09.png",
+"txt_mouth_001_skin10": "mouthTexture/txt_mouth_001_skin10.png",
+"txt_mouth_001_skin11": "mouthTexture/txt_mouth_001_skin11.png",
+"txt_mouth_002_skin01": "mouthTexture/txt_mouth_002_skin01.png",
+"txt_mouth_002_skin02": "mouthTexture/txt_mouth_002_skin02.png",
+"txt_mouth_002_skin03": "mouthTexture/txt_mouth_002_skin03.png",
+"txt_mouth_002_skin04": "mouthTexture/txt_mouth_002_skin04.png",
+"txt_mouth_002_skin05": "mouthTexture/txt_mouth_002_skin05.png",
+"txt_mouth_002_skin06": "mouthTexture/txt_mouth_002_skin06.png",
+"txt_mouth_002_skin07": "mouthTexture/txt_mouth_002_skin07.png",
+"txt_mouth_002_skin08": "mouthTexture/txt_mouth_002_skin08.png",
+"txt_mouth_002_skin09": "mouthTexture/txt_mouth_002_skin09.png",
+"txt_mouth_002_skin10": "mouthTexture/txt_mouth_002_skin10.png",
+"txt_mouth_002_skin11": "mouthTexture/txt_mouth_002_skin11.png",
+"txt_mouth_003_skin01": "mouthTexture/txt_mouth_003_skin01.png",
+"txt_mouth_003_skin02": "mouthTexture/txt_mouth_003_skin02.png",
+"txt_mouth_003_skin03": "mouthTexture/txt_mouth_003_skin03.png",
+"txt_mouth_003_skin04": "mouthTexture/txt_mouth_003_skin04.png",
+"txt_mouth_003_skin05": "mouthTexture/txt_mouth_003_skin05.png",
+"txt_mouth_003_skin06": "mouthTexture/txt_mouth_003_skin06.png",
+"txt_mouth_003_skin07": "mouthTexture/txt_mouth_003_skin07.png",
+"txt_mouth_003_skin08": "mouthTexture/txt_mouth_003_skin08.png",
+"txt_mouth_003_skin09": "mouthTexture/txt_mouth_003_skin09.png",
+"txt_mouth_003_skin10": "mouthTexture/txt_mouth_003_skin10.png",
+"txt_mouth_003_skin11": "mouthTexture/txt_mouth_003_skin11.png",
+"txt_mouth_004_skin01": "mouthTexture/txt_mouth_004_skin01.png",
+"txt_mouth_004_skin02": "mouthTexture/txt_mouth_004_skin02.png",
+"txt_mouth_004_skin03": "mouthTexture/txt_mouth_004_skin03.png",
+"txt_mouth_004_skin04": "mouthTexture/txt_mouth_004_skin04.png",
+"txt_mouth_004_skin05": "mouthTexture/txt_mouth_004_skin05.png",
+"txt_mouth_004_skin06": "mouthTexture/txt_mouth_004_skin06.png",
+"txt_mouth_004_skin07": "mouthTexture/txt_mouth_004_skin07.png",
+"txt_mouth_004_skin08": "mouthTexture/txt_mouth_004_skin08.png",
+"txt_mouth_004_skin09": "mouthTexture/txt_mouth_004_skin09.png",
+"txt_mouth_004_skin10": "mouthTexture/txt_mouth_004_skin10.png",
+"txt_mouth_004_skin11": "mouthTexture/txt_mouth_004_skin11.png",
+"txt_mouth_005_skin01": "mouthTexture/txt_mouth_005_skin01.png",
+"txt_mouth_005_skin02": "mouthTexture/txt_mouth_005_skin02.png",
+"txt_mouth_005_skin03": "mouthTexture/txt_mouth_005_skin03.png",
+"txt_mouth_005_skin04": "mouthTexture/txt_mouth_005_skin04.png",
+"txt_mouth_005_skin05": "mouthTexture/txt_mouth_005_skin05.png",
+"txt_mouth_005_skin06": "mouthTexture/txt_mouth_005_skin06.png",
+"txt_mouth_005_skin07": "mouthTexture/txt_mouth_005_skin07.png",
+"txt_mouth_005_skin08": "mouthTexture/txt_mouth_005_skin08.png",
+"txt_mouth_005_skin09": "mouthTexture/txt_mouth_005_skin09.png",
+"txt_mouth_005_skin10": "mouthTexture/txt_mouth_005_skin10.png",
+"txt_mouth_005_skin11": "mouthTexture/txt_mouth_005_skin11.png",
+"txt_mouth_006_skin01": "mouthTexture/txt_mouth_006_skin01.png",
+"txt_mouth_006_skin02": "mouthTexture/txt_mouth_006_skin02.png",
+"txt_mouth_006_skin03": "mouthTexture/txt_mouth_006_skin03.png",
+"txt_mouth_006_skin04": "mouthTexture/txt_mouth_006_skin04.png",
+"txt_mouth_006_skin05": "mouthTexture/txt_mouth_006_skin05.png",
+"txt_mouth_006_skin06": "mouthTexture/txt_mouth_006_skin06.png",
+"txt_mouth_006_skin07": "mouthTexture/txt_mouth_006_skin07.png",
+"txt_mouth_006_skin08": "mouthTexture/txt_mouth_006_skin08.png",
+"txt_mouth_006_skin09": "mouthTexture/txt_mouth_006_skin09.png",
+"txt_mouth_006_skin10": "mouthTexture/txt_mouth_006_skin10.png",
+"txt_mouth_006_skin11": "mouthTexture/txt_mouth_006_skin11.png",
+"txt_mouth_007_skin01": "mouthTexture/txt_mouth_007_skin01.png",
+"txt_mouth_007_skin02": "mouthTexture/txt_mouth_007_skin02.png",
+"txt_mouth_007_skin03": "mouthTexture/txt_mouth_007_skin03.png",
+"txt_mouth_007_skin04": "mouthTexture/txt_mouth_007_skin04.png",
+"txt_mouth_007_skin05": "mouthTexture/txt_mouth_007_skin05.png",
+"txt_mouth_007_skin06": "mouthTexture/txt_mouth_007_skin06.png",
+"txt_mouth_007_skin07": "mouthTexture/txt_mouth_007_skin07.png",
+"txt_mouth_007_skin08": "mouthTexture/txt_mouth_007_skin08.png",
+"txt_mouth_007_skin09": "mouthTexture/txt_mouth_007_skin09.png",
+"txt_mouth_007_skin10": "mouthTexture/txt_mouth_007_skin10.png",
+"txt_mouth_007_skin11": "mouthTexture/txt_mouth_007_skin11.png",
+"txt_mouth_008_skin01": "mouthTexture/txt_mouth_008_skin01.png",
+"txt_mouth_008_skin02": "mouthTexture/txt_mouth_008_skin02.png",
+"txt_mouth_008_skin03": "mouthTexture/txt_mouth_008_skin03.png",
+"txt_mouth_008_skin04": "mouthTexture/txt_mouth_008_skin04.png",
+"txt_mouth_008_skin05": "mouthTexture/txt_mouth_008_skin05.png",
+"txt_mouth_008_skin06": "mouthTexture/txt_mouth_008_skin06.png",
+"txt_mouth_008_skin07": "mouthTexture/txt_mouth_008_skin07.png",
+"txt_mouth_008_skin08": "mouthTexture/txt_mouth_008_skin08.png",
+"txt_mouth_008_skin09": "mouthTexture/txt_mouth_008_skin09.png",
+"txt_mouth_008_skin10": "mouthTexture/txt_mouth_008_skin10.png",
+"txt_mouth_008_skin11": "mouthTexture/txt_mouth_008_skin11.png",
+"txt_mouth_009_skin01": "mouthTexture/txt_mouth_009_skin01.png",
+"txt_mouth_009_skin02": "mouthTexture/txt_mouth_009_skin02.png",
+"txt_mouth_009_skin03": "mouthTexture/txt_mouth_009_skin03.png",
+"txt_mouth_009_skin04": "mouthTexture/txt_mouth_009_skin04.png",
+"txt_mouth_009_skin05": "mouthTexture/txt_mouth_009_skin05.png",
+"txt_mouth_009_skin06": "mouthTexture/txt_mouth_009_skin06.png",
+"txt_mouth_009_skin07": "mouthTexture/txt_mouth_009_skin07.png",
+"txt_mouth_009_skin08": "mouthTexture/txt_mouth_009_skin08.png",
+"txt_mouth_009_skin09": "mouthTexture/txt_mouth_009_skin09.png",
+"txt_mouth_009_skin10": "mouthTexture/txt_mouth_009_skin10.png",
+"txt_mouth_009_skin11": "mouthTexture/txt_mouth_009_skin11.png",
+"txt_mouth_010_skin01": "mouthTexture/txt_mouth_010_skin01.png",
+"txt_mouth_010_skin02": "mouthTexture/txt_mouth_010_skin02.png",
+"txt_mouth_010_skin03": "mouthTexture/txt_mouth_010_skin03.png",
+"txt_mouth_010_skin04": "mouthTexture/txt_mouth_010_skin04.png",
+"txt_mouth_010_skin05": "mouthTexture/txt_mouth_010_skin05.png",
+"txt_mouth_010_skin06": "mouthTexture/txt_mouth_010_skin06.png",
+"txt_mouth_010_skin07": "mouthTexture/txt_mouth_010_skin07.png",
+"txt_mouth_010_skin08": "mouthTexture/txt_mouth_010_skin08.png",
+"txt_mouth_010_skin09": "mouthTexture/txt_mouth_010_skin09.png",
+"txt_mouth_010_skin10": "mouthTexture/txt_mouth_010_skin10.png",
+"txt_mouth_010_skin11": "mouthTexture/txt_mouth_010_skin11.png",
+"txt_mouth_011_skin01": "mouthTexture/txt_mouth_011_skin01.png",
+"txt_mouth_011_skin02": "mouthTexture/txt_mouth_011_skin02.png",
+"txt_mouth_011_skin03": "mouthTexture/txt_mouth_011_skin03.png",
+"txt_mouth_011_skin04": "mouthTexture/txt_mouth_011_skin04.png",
+"txt_mouth_011_skin05": "mouthTexture/txt_mouth_011_skin05.png",
+"txt_mouth_011_skin06": "mouthTexture/txt_mouth_011_skin06.png",
+"txt_mouth_011_skin07": "mouthTexture/txt_mouth_011_skin07.png",
+"txt_mouth_011_skin08": "mouthTexture/txt_mouth_011_skin08.png",
+"txt_mouth_011_skin09": "mouthTexture/txt_mouth_011_skin09.png",
+"txt_mouth_011_skin10": "mouthTexture/txt_mouth_011_skin10.png",
+"txt_mouth_011_skin11": "mouthTexture/txt_mouth_011_skin11.png",
+"txt_mouth_012_skin01": "mouthTexture/txt_mouth_012_skin01.png",
+"txt_mouth_012_skin02": "mouthTexture/txt_mouth_012_skin02.png",
+"txt_mouth_012_skin03": "mouthTexture/txt_mouth_012_skin03.png",
+"txt_mouth_012_skin04": "mouthTexture/txt_mouth_012_skin04.png",
+"txt_mouth_012_skin05": "mouthTexture/txt_mouth_012_skin05.png",
+"txt_mouth_012_skin06": "mouthTexture/txt_mouth_012_skin06.png",
+"txt_mouth_012_skin07": "mouthTexture/txt_mouth_012_skin07.png",
+"txt_mouth_012_skin08": "mouthTexture/txt_mouth_012_skin08.png",
+"txt_mouth_012_skin09": "mouthTexture/txt_mouth_012_skin09.png",
+"txt_mouth_012_skin10": "mouthTexture/txt_mouth_012_skin10.png",
+"txt_mouth_012_skin11": "mouthTexture/txt_mouth_012_skin11.png",
+"txt_mouth_013_skin01": "mouthTexture/txt_mouth_013_skin01.png",
+"txt_mouth_013_skin02": "mouthTexture/txt_mouth_013_skin02.png",
+"txt_mouth_013_skin03": "mouthTexture/txt_mouth_013_skin03.png",
+"txt_mouth_013_skin04": "mouthTexture/txt_mouth_013_skin04.png",
+"txt_mouth_013_skin05": "mouthTexture/txt_mouth_013_skin05.png",
+"txt_mouth_013_skin06": "mouthTexture/txt_mouth_013_skin06.png",
+"txt_mouth_013_skin07": "mouthTexture/txt_mouth_013_skin07.png",
+"txt_mouth_013_skin08": "mouthTexture/txt_mouth_013_skin08.png",
+"txt_mouth_013_skin09": "mouthTexture/txt_mouth_013_skin09.png",
+"txt_mouth_013_skin10": "mouthTexture/txt_mouth_013_skin10.png",
+"txt_mouth_013_skin11": "mouthTexture/txt_mouth_013_skin11.png",
+"txt_mouth_014_skin01": "mouthTexture/txt_mouth_014_skin01.png",
+"txt_mouth_014_skin02": "mouthTexture/txt_mouth_014_skin02.png",
+"txt_mouth_014_skin03": "mouthTexture/txt_mouth_014_skin03.png",
+"txt_mouth_014_skin04": "mouthTexture/txt_mouth_014_skin04.png",
+"txt_mouth_014_skin05": "mouthTexture/txt_mouth_014_skin05.png",
+"txt_mouth_014_skin06": "mouthTexture/txt_mouth_014_skin06.png",
+"txt_mouth_014_skin07": "mouthTexture/txt_mouth_014_skin07.png",
+"txt_mouth_014_skin08": "mouthTexture/txt_mouth_014_skin08.png",
+"txt_mouth_014_skin09": "mouthTexture/txt_mouth_014_skin09.png",
+"txt_mouth_014_skin10": "mouthTexture/txt_mouth_014_skin10.png",
+"txt_mouth_014_skin11": "mouthTexture/txt_mouth_014_skin11.png",
+"txt_mouth_015_skin01": "mouthTexture/txt_mouth_015_skin01.png",
+"txt_mouth_015_skin02": "mouthTexture/txt_mouth_015_skin02.png",
+"txt_mouth_015_skin03": "mouthTexture/txt_mouth_015_skin03.png",
+"txt_mouth_015_skin04": "mouthTexture/txt_mouth_015_skin04.png",
+"txt_mouth_015_skin05": "mouthTexture/txt_mouth_015_skin05.png",
+"txt_mouth_015_skin06": "mouthTexture/txt_mouth_015_skin06.png",
+"txt_mouth_015_skin07": "mouthTexture/txt_mouth_015_skin07.png",
+"txt_mouth_015_skin08": "mouthTexture/txt_mouth_015_skin08.png",
+"txt_mouth_015_skin09": "mouthTexture/txt_mouth_015_skin09.png",
+"txt_mouth_015_skin10": "mouthTexture/txt_mouth_015_skin10.png",
+"txt_mouth_015_skin11": "mouthTexture/txt_mouth_015_skin11.png",
+"txt_mouth_016_skin01": "mouthTexture/txt_mouth_016_skin01.png",
+"txt_mouth_016_skin02": "mouthTexture/txt_mouth_016_skin02.png",
+"txt_mouth_016_skin03": "mouthTexture/txt_mouth_016_skin03.png",
+"txt_mouth_016_skin04": "mouthTexture/txt_mouth_016_skin04.png",
+"txt_mouth_016_skin05": "mouthTexture/txt_mouth_016_skin05.png",
+"txt_mouth_016_skin06": "mouthTexture/txt_mouth_016_skin06.png",
+"txt_mouth_016_skin07": "mouthTexture/txt_mouth_016_skin07.png",
+"txt_mouth_016_skin08": "mouthTexture/txt_mouth_016_skin08.png",
+"txt_mouth_016_skin09": "mouthTexture/txt_mouth_016_skin09.png",
+"txt_mouth_016_skin10": "mouthTexture/txt_mouth_016_skin10.png",
+"txt_mouth_016_skin11": "mouthTexture/txt_mouth_016_skin11.png",
+"txt_mouth_017_skin01": "mouthTexture/txt_mouth_017_skin01.png",
+"txt_mouth_017_skin02": "mouthTexture/txt_mouth_017_skin02.png",
+"txt_mouth_017_skin03": "mouthTexture/txt_mouth_017_skin03.png",
+"txt_mouth_017_skin04": "mouthTexture/txt_mouth_017_skin04.png",
+"txt_mouth_017_skin05": "mouthTexture/txt_mouth_017_skin05.png",
+"txt_mouth_017_skin06": "mouthTexture/txt_mouth_017_skin06.png",
+"txt_mouth_017_skin07": "mouthTexture/txt_mouth_017_skin07.png",
+"txt_mouth_017_skin08": "mouthTexture/txt_mouth_017_skin08.png",
+"txt_mouth_017_skin09": "mouthTexture/txt_mouth_017_skin09.png",
+"txt_mouth_017_skin10": "mouthTexture/txt_mouth_017_skin10.png",
+"txt_mouth_017_skin11": "mouthTexture/txt_mouth_017_skin11.png",
+"txt_mouth_018_skin01": "mouthTexture/txt_mouth_018_skin01.png",
+"txt_mouth_018_skin02": "mouthTexture/txt_mouth_018_skin02.png",
+"txt_mouth_018_skin03": "mouthTexture/txt_mouth_018_skin03.png",
+"txt_mouth_018_skin04": "mouthTexture/txt_mouth_018_skin04.png",
+"txt_mouth_018_skin05": "mouthTexture/txt_mouth_018_skin05.png",
+"txt_mouth_018_skin06": "mouthTexture/txt_mouth_018_skin06.png",
+"txt_mouth_018_skin07": "mouthTexture/txt_mouth_018_skin07.png",
+"txt_mouth_018_skin08": "mouthTexture/txt_mouth_018_skin08.png",
+"txt_mouth_018_skin09": "mouthTexture/txt_mouth_018_skin09.png",
+"txt_mouth_018_skin10": "mouthTexture/txt_mouth_018_skin10.png",
+"txt_mouth_018_skin11": "mouthTexture/txt_mouth_018_skin11.png",
+"txt_mouth_019_skin01": "mouthTexture/txt_mouth_019_skin01.png",
+"txt_mouth_019_skin02": "mouthTexture/txt_mouth_019_skin02.png",
+"txt_mouth_019_skin03": "mouthTexture/txt_mouth_019_skin03.png",
+"txt_mouth_019_skin04": "mouthTexture/txt_mouth_019_skin04.png",
+"txt_mouth_019_skin05": "mouthTexture/txt_mouth_019_skin05.png",
+"txt_mouth_019_skin06": "mouthTexture/txt_mouth_019_skin06.png",
+"txt_mouth_019_skin07": "mouthTexture/txt_mouth_019_skin07.png",
+"txt_mouth_019_skin08": "mouthTexture/txt_mouth_019_skin08.png",
+"txt_mouth_019_skin09": "mouthTexture/txt_mouth_019_skin09.png",
+"txt_mouth_019_skin10": "mouthTexture/txt_mouth_019_skin10.png",
+"txt_mouth_019_skin11": "mouthTexture/txt_mouth_019_skin11.png",
+"txt_mouth_020_skin01": "mouthTexture/txt_mouth_020_skin01.png",
+"txt_mouth_020_skin02": "mouthTexture/txt_mouth_020_skin02.png",
+"txt_mouth_020_skin03": "mouthTexture/txt_mouth_020_skin03.png",
+"txt_mouth_020_skin04": "mouthTexture/txt_mouth_020_skin04.png",
+"txt_mouth_020_skin05": "mouthTexture/txt_mouth_020_skin05.png",
+"txt_mouth_020_skin06": "mouthTexture/txt_mouth_020_skin06.png",
+"txt_mouth_020_skin07": "mouthTexture/txt_mouth_020_skin07.png",
+"txt_mouth_020_skin08": "mouthTexture/txt_mouth_020_skin08.png",
+"txt_mouth_020_skin09": "mouthTexture/txt_mouth_020_skin09.png",
+"txt_mouth_020_skin10": "mouthTexture/txt_mouth_020_skin10.png",
+"txt_mouth_020_skin11": "mouthTexture/txt_mouth_020_skin11.png",
+"txt_mouth_021_skin01": "mouthTexture/txt_mouth_021_skin01.png",
+"txt_mouth_021_skin02": "mouthTexture/txt_mouth_021_skin02.png",
+"txt_mouth_021_skin03": "mouthTexture/txt_mouth_021_skin03.png",
+"txt_mouth_021_skin04": "mouthTexture/txt_mouth_021_skin04.png",
+"txt_mouth_021_skin05": "mouthTexture/txt_mouth_021_skin05.png",
+"txt_mouth_021_skin06": "mouthTexture/txt_mouth_021_skin06.png",
+"txt_mouth_021_skin07": "mouthTexture/txt_mouth_021_skin07.png",
+"txt_mouth_021_skin08": "mouthTexture/txt_mouth_021_skin08.png",
+"txt_mouth_021_skin09": "mouthTexture/txt_mouth_021_skin09.png",
+"txt_mouth_021_skin10": "mouthTexture/txt_mouth_021_skin10.png",
+"txt_mouth_021_skin11": "mouthTexture/txt_mouth_021_skin11.png",
+"txt_mouth_022_skin01": "mouthTexture/txt_mouth_022_skin01.png",
+"txt_mouth_022_skin02": "mouthTexture/txt_mouth_022_skin02.png",
+"txt_mouth_022_skin03": "mouthTexture/txt_mouth_022_skin03.png",
+"txt_mouth_022_skin04": "mouthTexture/txt_mouth_022_skin04.png",
+"txt_mouth_022_skin05": "mouthTexture/txt_mouth_022_skin05.png",
+"txt_mouth_022_skin06": "mouthTexture/txt_mouth_022_skin06.png",
+"txt_mouth_022_skin07": "mouthTexture/txt_mouth_022_skin07.png",
+"txt_mouth_022_skin08": "mouthTexture/txt_mouth_022_skin08.png",
+"txt_mouth_022_skin09": "mouthTexture/txt_mouth_022_skin09.png",
+"txt_mouth_022_skin10": "mouthTexture/txt_mouth_022_skin10.png",
+"txt_mouth_022_skin11": "mouthTexture/txt_mouth_022_skin11.png",
+"txt_mouth_023_skin01": "mouthTexture/txt_mouth_023_skin01.png",
+"txt_mouth_023_skin02": "mouthTexture/txt_mouth_023_skin02.png",
+"txt_mouth_023_skin03": "mouthTexture/txt_mouth_023_skin03.png",
+"txt_mouth_023_skin04": "mouthTexture/txt_mouth_023_skin04.png",
+"txt_mouth_023_skin05": "mouthTexture/txt_mouth_023_skin05.png",
+"txt_mouth_023_skin06": "mouthTexture/txt_mouth_023_skin06.png",
+"txt_mouth_023_skin07": "mouthTexture/txt_mouth_023_skin07.png",
+"txt_mouth_023_skin08": "mouthTexture/txt_mouth_023_skin08.png",
+"txt_mouth_023_skin09": "mouthTexture/txt_mouth_023_skin09.png",
+"txt_mouth_023_skin10": "mouthTexture/txt_mouth_023_skin10.png",
+"txt_mouth_023_skin11": "mouthTexture/txt_mouth_023_skin11.png",
+"txt_mouth_024_skin01": "mouthTexture/txt_mouth_024_skin01.png",
+"txt_mouth_024_skin02": "mouthTexture/txt_mouth_024_skin02.png",
+"txt_mouth_024_skin03": "mouthTexture/txt_mouth_024_skin03.png",
+"txt_mouth_024_skin04": "mouthTexture/txt_mouth_024_skin04.png",
+"txt_mouth_024_skin05": "mouthTexture/txt_mouth_024_skin05.png",
+"txt_mouth_024_skin06": "mouthTexture/txt_mouth_024_skin06.png",
+"txt_mouth_024_skin07": "mouthTexture/txt_mouth_024_skin07.png",
+"txt_mouth_024_skin08": "mouthTexture/txt_mouth_024_skin08.png",
+"txt_mouth_024_skin09": "mouthTexture/txt_mouth_024_skin09.png",
+"txt_mouth_024_skin10": "mouthTexture/txt_mouth_024_skin10.png",
+"txt_mouth_024_skin11": "mouthTexture/txt_mouth_024_skin11.png"
+},
+"eyeBlink": {
+"txt_eye_001_closed_skin01": "eyeBlink/txt_eye_001_closed_skin01.png",
+"txt_eye_001_closed_skin02": "eyeBlink/txt_eye_001_closed_skin02.png",
+"txt_eye_001_closed_skin03": "eyeBlink/txt_eye_001_closed_skin03.png",
+"txt_eye_001_closed_skin04": "eyeBlink/txt_eye_001_closed_skin04.png",
+"txt_eye_001_closed_skin05": "eyeBlink/txt_eye_001_closed_skin05.png"
+},
+"hairTexture": {
+"txt_hair_001": "hairTexture/txt_hair_001.png",
+"txt_hair_002": "hairTexture/txt_hair_002.png",
+"txt_hair_003": "hairTexture/txt_hair_003.png",
+"txt_hair_004": "hairTexture/txt_hair_004.png",
+"txt_hair_005": "hairTexture/txt_hair_005.png",
+"txt_hair_006": "hairTexture/txt_hair_006.png",
+"txt_hair_007": "hairTexture/txt_hair_007.png",
+"txt_hair_008": "hairTexture/txt_hair_008.png",
+"txt_hair_009": "hairTexture/txt_hair_009.png",
+"txt_hair_010": "hairTexture/txt_hair_010.png",
+"txt_hair_011": "hairTexture/txt_hair_011.png",
+"txt_hair_012": "hairTexture/txt_hair_012.png",
+"txt_hair_013": "hairTexture/txt_hair_013.png",
+"txt_hair_014": "hairTexture/txt_hair_014.png",
+"txt_hair_015": "hairTexture/txt_hair_015.png",
+"txt_hair_016": "hairTexture/txt_hair_016.png",
+"txt_hair_017": "hairTexture/txt_hair_017.png",
+"txt_hair_018": "hairTexture/txt_hair_018.png",
+"txt_hair_019": "hairTexture/txt_hair_019.png",
+"txt_hair_020": "hairTexture/txt_hair_020.png",
+"txt_hair_021": "hairTexture/txt_hair_021.png",
+"txt_hair_022": "hairTexture/txt_hair_022.png",
+"txt_hair_023": "hairTexture/txt_hair_023.png",
+"txt_hair_024": "hairTexture/txt_hair_024.png"
+},
+"hairTexturePattern": {
+"txt_CurltTill": "hairTexturePattern/txt_CurltTill.png",
+"txt_HairTilling": "hairTexturePattern/txt_HairTilling.png"
+},
+"hatTexture": {
+"txt_hat001": "hatTexture/txt_hat001.png",
+"txt_hat002": "hatTexture/txt_hat002.png",
+"txt_hat002_02": "hatTexture/txt_hat002_02.png",
+"txt_hat002_03": "hatTexture/txt_hat002_03.png",
+"txt_hat002_04": "hatTexture/txt_hat002_04.png",
+"txt_hat002_05": "hatTexture/txt_hat002_05.png",
+"txt_hat002_06": "hatTexture/txt_hat002_06.png",
+"txt_hat003": "hatTexture/txt_hat003.png",
+"txt_hat007": "hatTexture/txt_hat007.png",
+"txt_hat008": "hatTexture/txt_hat008.png",
+"txt_hat009": "hatTexture/txt_hat009.png",
+"txt_hat010": "hatTexture/txt_hat010.png",
+"txt_hat011": "hatTexture/txt_hat011.png",
+"txt_hat012": "hatTexture/txt_hat012.png",
+"txt_hat013_cv01": "hatTexture/txt_hat013_cv01.png",
+"txt_hat013_cv02": "hatTexture/txt_hat013_cv02.png",
+"txt_hat013_cv03": "hatTexture/txt_hat013_cv03.png",
+"txt_hat013_cv04": "hatTexture/txt_hat013_cv04.png",
+"txt_hat013_cv05": "hatTexture/txt_hat013_cv05.png"
+},
+"gogglesTexture": {
+"txt_goggles_001": "gogglesTexture/txt_goggles_001.png",
+"txt_goggles_002": "gogglesTexture/txt_goggles_002.png",
+"txt_goggles_003": "gogglesTexture/txt_goggles_003.png",
+"txt_goggles_004": "gogglesTexture/txt_goggles_004.png",
+"txt_goggles_005": "gogglesTexture/txt_goggles_005.png",
+"txt_goggles_006": "gogglesTexture/txt_goggles_006.png",
+"txt_goggles_007": "gogglesTexture/txt_goggles_007.png"
+}
+}
+}
+}

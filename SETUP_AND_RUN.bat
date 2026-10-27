@@ -25,7 +25,7 @@ echo  Installing/updating required packages...
 echo.
 
 python -m pip install --upgrade pip --quiet
-python -m pip install UnityPy Pillow --quiet
+python -m pip install UnityPy Pillow numpy --quiet
 
 if errorlevel 1 (
     echo.

@@ -1298,6 +1298,8 @@ class ModManagerApp(tk.Tk):
 
         self.mods_meta         = {}
         self.team_frame        = None
+        self.roster_frame      = None
+        self.roster_model      = None
         self.all_textures      = []
         self.filtered_textures = []
         self.selected_texture  = None
@@ -1539,6 +1541,11 @@ class ModManagerApp(tk.Tk):
         if getattr(self, "camera_frame", None) is not None:
             try:
                 self.camera_frame.set_game_path(gp)
+            except Exception:
+                pass
+        if getattr(self, "roster_frame", None) is not None:
+            try:
+                self.roster_frame.set_game_path(gp)
             except Exception:
                 pass
         if getattr(self, "full_courts_frame", None) is not None:
@@ -1799,6 +1806,7 @@ class ModManagerApp(tk.Tk):
             "Tune CPU skill, shot windows, and movement to match how you like to play.",
             self._open_gameplay_sliders_dialog)
         self._build_camera_tab(self.notebook)
+        self._build_roster_tabs(self.notebook)
         self._build_full_courts_tab(self.notebook)
         self.court_colors_tab = self._build_tool_tab(
             self.notebook, "🎨 Court Colors", "🎨", "Court Colors",
@@ -2121,6 +2129,46 @@ class ModManagerApp(tk.Tk):
                           f"camera_manager.py should sit in the modules folder "
                           f"next to app.py.").pack(anchor="w", padx=20, pady=20)
 
+    # ── Roster / Avatar / Accessory tabs ──────────────────────────────────────
+    def _build_roster_tabs(self, notebook):
+        """Custom players, ratings, avatar looks and accessories for the
+        BounceRoster / BounceRatings / BounceJersey BepInEx plugins.
+
+        Lives in roster_tab.py + avatar_tab.py + roster_manager.py +
+        ratings_manager.py (they import nothing from this file and never call
+        apply_single_mod()). They edit the CSVs in BepInEx/config and install
+        or remove the BepInEx loader; no game data file is touched. Imported
+        lazily so a missing module degrades to a message.
+        """
+        theme = {"bg": self.C["bg"], "panel": self.C["panel"], "accent": self.C["accent"],
+                 "text": self.C["text"], "muted": self.C["sub"], "entry": self.C["ebg"],
+                 "gold": self.C["gold"], "red": self.C["hi"]}
+        tabs = []
+        for key, label in (("roster_tab", "📋 Roster"), ("avatar_tab", "🧑 Avatar"),
+                           ("accessory_tab", "🧢 Accessory")):
+            tab = ttk.Frame(notebook, style="TFrame")
+            notebook.add(tab, text=label)
+            setattr(self, key, tab)
+            tabs.append(tab)
+        try:
+            from roster_manager import RosterData
+            from roster_tab import RosterTab
+            from avatar_tab import AvatarTab, AccessoryTab
+            self.roster_model = RosterData()
+            gp = self.cfg.get("game_data_path", "")
+            self.roster_frame = RosterTab(tabs[0], gp, self.roster_model, host=self, theme=theme)
+            self.roster_frame.pack(fill="both", expand=True)
+            for tab, cls in ((tabs[1], AvatarTab), (tabs[2], AccessoryTab)):
+                cls(tab, self.roster_model, theme=theme, host=self,
+                    on_save=self.roster_frame.save).pack(fill="both", expand=True)
+        except Exception as e:
+            self.roster_frame = None
+            for tab in tabs:
+                tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10), justify="left",
+                         text=f"Roster tabs unavailable:\n{e}\n\nroster_tab.py, avatar_tab.py, "
+                              f"roster_manager.py and ratings_manager.py should sit in the modules "
+                              f"folder next to app.py.").pack(anchor="w", padx=20, pady=20)
+
     # ── Full Courts tab ───────────────────────────────────────────────────────
     def _build_full_courts_tab(self, notebook):
         """One picture over a team's whole court, optionally one per retro
@@ -2301,6 +2349,11 @@ class ModManagerApp(tk.Tk):
             self.team_frame.load(silent=True)
         elif getattr(self, "camera_frame", None) is not None and current is getattr(self, "camera_tab", None):
             self.camera_frame.load(silent=True)
+        elif getattr(self, "roster_frame", None) is not None and current in (
+                getattr(self, "roster_tab", None), getattr(self, "avatar_tab", None),
+                getattr(self, "accessory_tab", None)):
+            self.roster_frame.refresh_loader()
+            self.roster_frame.load(silent=True)
         elif getattr(self, "full_courts_frame", None) is not None and current is getattr(self, "full_courts_tab", None):
             self.full_courts_frame.load(silent=True)
         elif current is getattr(self, "floor_patterns_tab", None):

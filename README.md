@@ -216,6 +216,29 @@ Close the game before applying. It reads the camera once at startup. The intro, 
 
 ---
 
+## Roster, Avatar and Accessory (optional BepInEx loader)
+
+These three tabs need the optional **BepInEx 5 loader**. Install it from the
+Roster tab with **Install Loader**. It adds three plugins: BounceRatings,
+BounceRoster and BounceJersey. They read CSVs in `BepInEx\config\`, and no
+game data file is touched.
+
+- **Roster:** add custom players to any team as starters, bench or legends.
+  Set NBA Jam-style 1-10 ratings (Speed, Shooting, Dunk, Pass, Steal, Block,
+  Power) and height/weight, which scale the model and its hitbox. You can
+  import and export rosters.
+- **Avatar:** skin, face, hair, colours and body, with a live head preview.
+- **Accessory:** hats, goggles, sneakers, limb sleeves and limb colours.
+- Custom players get NBA-style jerseys: last name above the back number, and
+  the number on the front.
+- GOAT characters can be picked in Quick Play.
+
+Antivirus tools sometimes flag BepInEx's `winhttp.dll` (a false positive).
+**Disable** returns the game to vanilla without removing anything, and
+**Uninstall Loader** removes it completely; the CSVs are backed up to
+`user/ratings_backup/`. Look limits: 5 human skin tones, no facial hair or
+headband, about 24 hair styles, male rig only in the preview.
+
 ## Court Colors
 
 Recolor a team's court, split into two independent pieces:
