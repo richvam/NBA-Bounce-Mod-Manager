@@ -326,6 +326,19 @@ class _EditorTab(tk.Frame):
                            lambda v, n=name: self._pick_color(n, v))
             cg.pack(fill="x", padx=6, pady=(0, 6))
             self.widgets[name] = ("color", cg, info, None)
+        elif kind == "choice":
+            # spec[3] = [(label, value), ...]; stored as the float the game expects.
+            choices = spec[3]
+            var = tk.DoubleVar(value=choices[0][1])
+            cb = ttk.Combobox(box, state="readonly", width=12, values=[c[0] for c in choices])
+            cb.pack(anchor="w", padx=6, pady=(0, 6))
+
+            def picked(_e, n=name, cb=cb, var=var, choices=choices):
+                var.set(dict(choices)[cb.get()])
+                self._slide(n)
+            cb.bind("<<ComboboxSelected>>", picked)
+            cb.choices = choices
+            self.widgets[name] = ("choice", cb, info, var)
         else:
             var = tk.DoubleVar(value=0.5)
             sc = tk.Scale(box, from_=0, to=1, resolution=0.005, orient="horizontal", variable=var,
@@ -430,6 +443,8 @@ class _EditorTab(tk.Frame):
                 except (TypeError, ValueError):
                     v = cat.float_default(name)
                 w[3].set(v)
+                if kind == "choice":
+                    widget.set(min(widget.choices, key=lambda c: abs(c[1] - v))[0])
                 note = f"{note}; default {cat.float_default(name):g}"
             info.config(text=note, fg=self.th["gold"] if ov else self.th["muted"])
             self._toggle_visibility(name, vals, tvals)
@@ -518,7 +533,7 @@ class AvatarTab(_EditorTab):
                   ("grid", "hairTexturePattern", "Hair pattern"),
                   ("color", "hairColor", "Hair colour")]),
         ("Body", [("float", "slimFat", "Slim .. fat"), ("float", "weakStrong", "Weak .. strong"),
-                  ("float", "handsSize", "Hand size"), ("float", "maleOrFemale", "Male .. female")]),
+                  ("float", "handsSize", "Hand size"), ("choice", "maleOrFemale", "Gender", [("Male", 0.0), ("Female", 1.0)])]),
         ("Fine-tune", [("float", n, t) for n, t in [
             ("eyesScale", "Eye size"), ("eyesSeparate", "Eye distance"),
             ("eyesMoveVertical", "Eye height"), ("eyesRotate", "Eye tilt"),

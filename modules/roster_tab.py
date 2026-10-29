@@ -120,9 +120,20 @@ class RosterTab(tk.Frame):
         for b in (self.b_add, self.b_dup, self.b_del, self.b_up, self.b_dn):
             b.pack(side="left", padx=3)
 
-        right = tk.Frame(body, bg=t["panel"], width=300)
-        right.pack(side="right", fill="y", padx=(8, 0))
-        right.pack_propagate(False)
+        # The player form is taller than short windows, so it scrolls.
+        side = tk.Frame(body, bg=t["panel"], width=318)
+        side.pack(side="right", fill="y", padx=(8, 0))
+        side.pack_propagate(False)
+        side_cv = tk.Canvas(side, bg=t["panel"], highlightthickness=0)
+        side_sb = ttk.Scrollbar(side, orient="vertical", command=side_cv.yview)
+        side_cv.configure(yscrollcommand=side_sb.set)
+        side_sb.pack(side="right", fill="y")
+        side_cv.pack(side="left", fill="both", expand=True)
+        right = tk.Frame(side_cv, bg=t["panel"])
+        side_win = side_cv.create_window((0, 0), window=right, anchor="nw")
+        right.bind("<Configure>", lambda e: side_cv.configure(scrollregion=side_cv.bbox("all")))
+        side_cv.bind("<Configure>", lambda e: side_cv.itemconfigure(side_win, width=e.width))
+        self._side_cv = side_cv
         self.sel_lbl = tk.Label(right, text="Select a player", bg=t["panel"], fg=t["gold"],
                                 font=("Segoe UI", 11, "bold"), anchor="w", wraplength=270, justify="left")
         self.sel_lbl.pack(fill="x", padx=12, pady=(10, 4))
@@ -169,6 +180,7 @@ class RosterTab(tk.Frame):
         self.reset_btn = self._btn(right, "Reset ratings to 5s", self.reset_ratings)
         self.reset_btn.pack(padx=12, pady=6, anchor="w")
         self._build_body(right)
+        self.after_idle(self._bind_side_wheel)
         self.prev_cv = tk.Canvas(right, width=110, height=110, bg=t["entry"], highlightthickness=0)
         self.prev_cv.pack(pady=4)
 
@@ -190,6 +202,21 @@ class RosterTab(tk.Frame):
         except (TypeError, ValueError):
             b = None
         return rmg.fmt_height(b[0]) if b else ""
+
+    def _bind_side_wheel(self):
+        """Mouse wheel scrolls the player form while the pointer is over it."""
+        cv = self._side_cv
+
+        def wheel(e):
+            if cv.yview() != (0.0, 1.0):
+                cv.yview_scroll(int(-e.delta / 120), "units")
+        stack = [cv]
+        while stack:
+            w = stack.pop()
+            if not isinstance(w, (tk.Scale, ttk.Scale, tk.Spinbox, ttk.Combobox)):
+                w.bind("<Enter>", lambda e: cv.bind_all("<MouseWheel>", wheel), add="+")
+                w.bind("<Leave>", lambda e: cv.unbind_all("<MouseWheel>"), add="+")
+            stack.extend(w.winfo_children())
 
     def _build_body(self, right):
         t = self.th

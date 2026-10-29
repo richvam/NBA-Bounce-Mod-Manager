@@ -1530,6 +1530,10 @@ class ModManagerApp(tk.Tk):
                 self.save_frame.set_game_data_path(gp)
             except Exception:
                 pass
+        # Gameplay Sliders read the old path when built; rebuild on next visit.
+        if getattr(self, "sliders_frame", None) is not None:
+            self.sliders_frame.destroy()
+            self.sliders_frame = None
         # Teams tab was handed the game path when it was built.
         if getattr(self, "team_frame", None) is not None:
             try:
@@ -1791,25 +1795,25 @@ class ModManagerApp(tk.Tk):
         for label, build in (("Home", self._build_home_tab),
                              ("Textures", self._build_textures_tab),
                              ("Audio", self._build_audio_tab),
-                             ("Meshes", self._build_meshes_tab),
-                             ("Teams", self._build_teams_tab)):
+                             ("Meshes", self._build_meshes_tab)):
             t = time.time()
             build(self.notebook)
             if time.time() - t > 0.5:
                 boot_log(f"  {label} tab took {time.time() - t:.1f}s")
+        courts = self._make_tab_group(self.notebook, "🏟 Courts")
+        self._build_full_courts_tab(courts)
         self.floor_patterns_tab = self._build_tool_tab(
-            self.notebook, "🪵 Floor Patterns", "🪵", "Floor Patterns",
+            courts, "🪵 Floor Patterns", "🪵", "Floor Patterns",
             "Pick a wood-grain pattern for each team's court, throwback eras included.",
             self._open_floor_patterns_dialog)
-        self.sliders_tab = self._build_tool_tab(
-            self.notebook, "🎚 Gameplay Sliders", "🎚", "Gameplay Sliders",
-            "Tune CPU skill, shot windows, and movement to match how you like to play.",
-            self._open_gameplay_sliders_dialog)
+        # Built in place the first time it's selected (it reads the ~95 MB scene file).
+        self.sliders_tab = ttk.Frame(self.notebook, style="TFrame")
+        self.notebook.add(self.sliders_tab, text="🎚 Gameplay Sliders")
+        self.sliders_frame = None
         self._build_camera_tab(self.notebook)
         self._build_roster_tabs(self.notebook)
-        self._build_full_courts_tab(self.notebook)
         self.court_colors_tab = self._build_tool_tab(
-            self.notebook, "🎨 Court Colors", "🎨", "Court Colors",
+            courts, "🎨 Court Colors", "🎨", "Court Colors",
             "Recolor each team's floor and court lines.",
             self._open_court_colors_dialog)
         self._build_saves_tab(self.notebook)
@@ -2143,11 +2147,13 @@ class ModManagerApp(tk.Tk):
         theme = {"bg": self.C["bg"], "panel": self.C["panel"], "accent": self.C["accent"],
                  "text": self.C["text"], "muted": self.C["sub"], "entry": self.C["ebg"],
                  "gold": self.C["gold"], "red": self.C["hi"]}
+        # One top-level Roster tab holding its own strip of sub-tabs, Teams included.
+        inner = self._make_tab_group(notebook, "📋 Roster")
         tabs = []
-        for key, label in (("roster_tab", "📋 Roster"), ("avatar_tab", "🧑 Avatar"),
+        for key, label in (("roster_tab", "📋 Players"), ("avatar_tab", "🧑 Avatar"),
                            ("accessory_tab", "🧢 Accessory")):
-            tab = ttk.Frame(notebook, style="TFrame")
-            notebook.add(tab, text=label)
+            tab = ttk.Frame(inner, style="TFrame")
+            inner.add(tab, text=label)
             setattr(self, key, tab)
             tabs.append(tab)
         try:
@@ -2168,6 +2174,22 @@ class ModManagerApp(tk.Tk):
                          text=f"Roster tabs unavailable:\n{e}\n\nroster_tab.py, avatar_tab.py, "
                               f"roster_manager.py and ratings_manager.py should sit in the modules "
                               f"folder next to app.py.").pack(anchor="w", padx=20, pady=20)
+        t = time.time()
+        self._build_teams_tab(inner)
+        if time.time() - t > 0.5:
+            boot_log(f"  Teams tab took {time.time() - t:.1f}s")
+
+    def _make_tab_group(self, notebook, label):
+        """A top-level tab holding its own notebook of sub-tabs; returns the inner notebook."""
+        group = ttk.Frame(notebook, style="TFrame")
+        notebook.add(group, text=label)
+        inner = ttk.Notebook(group)
+        inner.pack(fill="both", expand=True, padx=4, pady=4)
+        inner.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+        if not hasattr(self, "_tab_groups"):
+            self._tab_groups = {}
+        self._tab_groups[group] = inner
+        return inner
 
     # ── Full Courts tab ───────────────────────────────────────────────────────
     def _build_full_courts_tab(self, notebook):
@@ -2241,6 +2263,22 @@ class ModManagerApp(tk.Tk):
         tab = ttk.Frame(notebook, style="TFrame")
         notebook.add(tab, text="🏠 Home")
         self.home_tab = tab
+
+        # Everything below sits in a scrollable canvas so short windows can reach the last cards.
+        canvas = tk.Canvas(tab, bg=C["bg"], highlightthickness=0)
+        vbar = ttk.Scrollbar(tab, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vbar.set)
+        vbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        tab = tk.Frame(canvas, bg=C["bg"])
+        win = canvas.create_window((0, 0), window=tab, anchor="nw")
+        tab.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(win, width=e.width))
+
+        def _wheel(e):
+            if canvas.yview() != (0.0, 1.0):
+                canvas.yview_scroll(int(-e.delta / 120), "units")
+        self._home_scroll = (canvas, _wheel)
         tab.columnconfigure(0, weight=1)
 
         tk.Label(tab, text="🏀  "+APP_NAME, bg=C["bg"], fg=C["hi"],
@@ -2270,24 +2308,29 @@ class ModManagerApp(tk.Tk):
              lambda: self._goto_tab(self.audio_tab)),
             ("🧊", "Meshes", "View, export, and replace the game's 3D models.",
              lambda: self._goto_tab(self.meshes_tab)),
-            ("🏟", "Full Courts", "Put one picture on a team's whole floor, per retro court.",
+            ("🏟", "Courts", "Full-court pictures, wood-grain floor patterns, and court colors.",
              lambda: self._goto_tab(self.full_courts_tab)),
-            ("🪵", "Floor Patterns", "Pick a wood-grain pattern for each team's court.",
-             lambda: self._goto_tab(self.floor_patterns_tab)),
             ("🎚", "Gameplay Sliders", "Tune CPU skill, shot windows, and movement.",
              lambda: self._goto_tab(self.sliders_tab)),
             ("🎥", "Camera", "Broadcast, 2K Drive and more camera angles. Tune and share them.",
              lambda: self._goto_tab(self.camera_tab)),
-            ("🎨", "Court Colors", "Recolor each team's floor and court lines.",
-             lambda: self._goto_tab(self.court_colors_tab)),
+            ("📋", "Roster", "Custom players, avatars, accessories, and teams.",
+             lambda: self._goto_tab(self.roster_tab)),
             ("💾", "Saves", "Unlock mascots, jerseys, logos, balls, and trails.",
              lambda: self._goto_tab(self.saves_tab)),
-            ("🏀", "Teams", "Add custom teams, rename, recolor, and borrow art.",
-             lambda: self._goto_tab(self.teams_tab)),
         ]
         for i, (icon, title, desc, command) in enumerate(card_defs):
             self._build_home_card(cards, icon, title, desc, command).grid(
                 row=i // 3, column=i % 3, padx=16, pady=10)
+
+        # Same Enter/Leave wheel pattern as the Camera and Sliders tabs, on every widget of the page.
+        canvas, wheel = self._home_scroll
+        stack = [canvas]
+        while stack:
+            w = stack.pop()
+            w.bind("<Enter>", lambda e: canvas.bind_all("<MouseWheel>", wheel), add="+")
+            w.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"), add="+")
+            stack.extend(w.winfo_children())
 
     def _build_tool_tab(self, notebook, tab_label, icon, title, desc, open_command):
         """A tab for a tool that lives in its own popup dialog (Floor Patterns,
@@ -2332,13 +2375,21 @@ class ModManagerApp(tk.Tk):
 
     def _goto_tab(self, tab_widget):
         try:
-            self.notebook.select(tab_widget)
+            inner = tab_widget.master
+            if inner in getattr(self, "_tab_groups", {}).values():
+                self.notebook.select(inner.master)
+                inner.select(tab_widget)
+            else:
+                self.notebook.select(tab_widget)
         except Exception:
             pass
 
     def _on_tab_changed(self, event=None):
         try:
             current = self.notebook.nametowidget(self.notebook.select())
+            inner = getattr(self, "_tab_groups", {}).get(current)
+            if inner is not None:
+                current = inner.nametowidget(inner.select())
         except Exception:
             return
         if self.audio_frame is not None and current is self.audio_tab:
@@ -2358,8 +2409,8 @@ class ModManagerApp(tk.Tk):
             self.full_courts_frame.load(silent=True)
         elif current is getattr(self, "floor_patterns_tab", None):
             self.after(50, self._open_floor_patterns_dialog)
-        elif current is getattr(self, "sliders_tab", None):
-            self.after(50, self._open_gameplay_sliders_dialog)
+        elif current is getattr(self, "sliders_tab", None) and self.sliders_frame is None:
+            self.after(50, self._build_sliders_in_tab)
         elif current is getattr(self, "court_colors_tab", None):
             self.after(50, self._open_court_colors_dialog)
 
@@ -3031,6 +3082,26 @@ class ModManagerApp(tk.Tk):
             "gold":   self.C["gold"],
             "red":    self.C["hi"],
         })
+
+    def _build_sliders_in_tab(self):
+        """Gameplay Sliders embedded in its own tab instead of a popup window."""
+        tab = self.sliders_tab
+        for w in tab.winfo_children():
+            w.destroy()
+        gp = self.cfg.get("game_data_path", "")
+        try:
+            if not gp or not os.path.isdir(gp):
+                raise RuntimeError("Set your game data folder in Settings first.")
+            from slider_tab import SliderTab
+            self.sliders_frame = SliderTab(tab, gp, theme={
+                "bg": self.C["bg"], "panel": self.C["panel"], "accent": self.C["accent"],
+                "text": self.C["text"], "muted": self.C["sub"], "entry": self.C["ebg"],
+                "gold": self.C["gold"], "red": self.C["hi"]})
+            self.sliders_frame.pack(fill="both", expand=True)
+        except Exception as e:
+            self.sliders_frame = None
+            tk.Label(tab, bg=self.C["bg"], fg=self.C["hi"], font=("Segoe UI", 10), justify="left",
+                     text=f"Gameplay Sliders unavailable:\n{e}").pack(anchor="w", padx=20, pady=20)
 
     # ── Court Colors ──────────────────────────────────────────────────────────
     def _open_court_colors_dialog(self):

@@ -433,6 +433,9 @@ class RosterData:
         self.ratings, self.ratings_loaded = rm.Ratings(), False
         self.bodies = self._load_bodies()
         self.ensure_catalog()
+        # BepInEx only makes config/ on the game's first launch with it; make it ourselves.
+        if self.cfg_dir() and os.path.isdir(os.path.dirname(self.cfg_dir())):
+            os.makedirs(self.cfg_dir(), exist_ok=True)
         if not self.cfg_dir() or not os.path.isdir(self.cfg_dir()):
             self.selected = None
             self.notify("load")
