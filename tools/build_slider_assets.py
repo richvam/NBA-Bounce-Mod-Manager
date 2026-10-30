@@ -61,8 +61,10 @@ CPU = [
      ["m_fJumpBlockShotProbability", "m_v2JumpBlockCooldown"], [0.0, 60.0]),
     ("cpu_block_dunk", "CPU Dunk Block", "Defense",
      ["m_fJumpBlockDunkProbability", "m_v2JumpBlockDunkCooldown"], [0.0, 60.0]),
-    ("cpu_push_success", "CPU Push Success", "Defense",
-     ["m_fPushSucessProbability", "m_v2PushCooldown"], [0.0, 60.0]),
+    ("cpu_push_success", "CPU Push Success", "Push",
+     ["m_fPushSucessProbability"], [0.0, 1.0]),
+    ("cpu_push_frequency", "CPU Push Frequency", "Push",
+     ["m_v2PushCooldown"], [0.25, 60.0]),
     ("cpu_smack_frequency", "CPU Smack Frequency", "Defense",
      ["m_fSmackProbability", "m_v2SmackCooldown"], [0.0, 60.0]),
     ("cpu_intercept_pass", "CPU Pass Interception", "Defense",
@@ -93,7 +95,7 @@ USER = [
      ["m_v2StealCooldown", "m_v2RushToStealCooldown"], 2.0, 0.25, [0.0, 60.0]),
     ("user_block_frequency", "User Block Frequency", "Defense",
      ["m_v2JumpBlockCooldown"], 2.0, 0.25, [0.0, 60.0]),
-    ("user_push_frequency", "User Push Frequency", "Defense",
+    ("user_push_frequency", "User Push Frequency", "Push",
      ["m_v2PushCooldown"], 2.0, 0.25, [0.0, 60.0]),
     ("user_intercept_frequency", "User Pass Interception", "Defense",
      ["m_v2InterceptPassCooldown"], 2.0, 0.25, [0.0, 60.0]),
@@ -115,6 +117,8 @@ SHARED = [
      ["m_fPassSpeed", "m_fPassSpeedAllieOop"], 0.6, 1.5, [1.0, 60.0]),
     ("input_memory", "Input Buffer Window", "Controls", "playerstats",
      ["m_fInputMemoryTime"], 0.4, 2.0, [0.05, 2.0]),
+    ("push_reach", "Push Reach", "Push", "playerstats",
+     ["m_fPushMaxDistance"], 0.5, 1.5, [0.5, 5.0]),
 ]
 
 DESCRIPTIONS = {
@@ -165,8 +169,16 @@ DESCRIPTIONS = {
         "Chance the CPU contests a dunk at the rim, plus its own cooldown. Read "
         "by TeamAI.updateJumpBlockDunk. Tracked separately from shot blocking.",
     "cpu_push_success":
-        "Chance a CPU push knocks you off balance, plus the cooldown between "
-        "pushes. Read by PlayerPush.getSuccessRate.",
+        "Chance a CPU push knocks you over once it is in range. Multiplies "
+        "PlayerPush.getSuccessRate for CPU players only. In normal Bounce "
+        "matches this needs the Bounce Push plugin (checkbox above).",
+    "cpu_push_frequency":
+        "Minimum and maximum delay before a CPU player will try another push. "
+        "Higher = shorter cooldown = the CPU shoves more often.",
+    "push_reach":
+        "How far away a push can still connect (PlayerStats.m_fPushMaxDistance, "
+        "1.8 in stock). Your own push success is decided by distance and angle, "
+        "so this is the main lever for your side. Affects BOTH teams.",
     "cpu_smack_frequency":
         "Chance the CPU palms the ball out of your hands at the rim, plus its "
         "cooldown. Read by PlayerJumpBlock.canAIPalm.",
@@ -366,8 +378,8 @@ def main(root):
         "unity": "6000.0.37f1",
         "anchoring": "UI 25 = the game's Rookie difficulty, UI 50 = Advanced, UI 75 = Pro (the hardest in-game option). Piecewise, extrapolated beyond.",
         "convention": "Higher UI = more of that thing for that side (NBA 2K convention)",
-        "categories": ["Shooting", "Passing", "Defense", "Rebounding", "Movement",
-                       "Awareness", "Controls"],
+        "categories": ["Shooting", "Passing", "Defense", "Push", "Rebounding",
+                       "Movement", "Awareness", "Controls"],
         "shot_window": {
             "_model": "Each zone width = shipped_width * fraction. UI 100 = shipped width (easiest the game ships), UI 0 = a sliver.",
             "slider_100": "shot_window_100", "frac100_at0": 0.03, "frac100_at100": 1.0,
@@ -391,6 +403,7 @@ def main(root):
     # shot window follows the USER curve but is deliberately gentler at the top
     WINDOW = {"Rookie": 92, "Pro": 62, "All-Star": 48, "Superstar": 33, "Hall of Fame": 16}
     NEUTRAL = {"player_speed": 50, "player_acceleration": 50, "pass_speed": 50,
+               "push_reach": 50,
                "input_memory": {"Rookie": 70, "Pro": 55, "All-Star": 50,
                                 "Superstar": 45, "Hall of Fame": 38}}
 

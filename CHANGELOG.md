@@ -1,6 +1,27 @@
 # Changelog
 
-## v4.0.0 (unreleased)
+## v4.1.0
+
+### What's New
+
+- **Shoving in normal NBA Bounce matches, not just GOAT mode.** The game
+  only allows Push in GOAT mode. A new optional BepInEx plugin, Bounce Push,
+  lifts that for both your players and the CPU. Turn it on with the
+  "Allow shoving in normal Bounce matches" checkbox in Gameplay Sliders. It
+  installs with the other plugins from the Roster tab and ships switched off.
+- **New Push section in Gameplay Sliders.** CPU Push Success, CPU Push
+  Frequency, User Push Frequency and a new Push Reach slider (how far a
+  shove can connect, both teams). Push Reach is the main lever for your own
+  shoves, since the game decides those by distance and angle. These sliders
+  also tune GOAT mode.
+
+### Fixes
+
+- CPU Push Success could write a success chance up to 60 instead of 0-1,
+  and it moved the push cooldown along with it. Success and cooldown are now
+  separate sliders, and success is capped at 100%.
+
+## v4.0.0
 
 ### What's New
 

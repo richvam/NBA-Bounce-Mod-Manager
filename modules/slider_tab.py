@@ -297,9 +297,34 @@ class SliderTab(ttk.Frame):
             box = ttk.Labelframe(self.inner, text=" %s " % section,
                                  style="Sld.TLabelframe")
             box.pack(fill="x", pady=5, padx=2)
+            if section == "Push":
+                self._push_toggle(box)
             for sid in sorted(ids, key=lambda k: (cat["sliders"][k]["side"],
                                                   cat["sliders"][k]["label"])):
                 self._slider_row(box, sid, cat["sliders"][sid])
+
+    def _push_toggle(self, parent):
+        """NBA Bounce only allows shoving in GOAT mode; the Bounce Push plugin
+        lifts that. Takes effect immediately -- no Apply needed."""
+        from push_plugin import PushPlugin
+        plug = PushPlugin(self.game_data_path)
+        var = tk.BooleanVar(value=plug.enabled())
+
+        def toggle():
+            try:
+                plug.set_enabled(var.get())
+            except Exception as exc:
+                var.set(plug.enabled())
+                messagebox.showerror("Gameplay Sliders", str(exc), parent=self)
+        tk.Checkbutton(parent, text="Allow shoving in normal Bounce matches (not just GOAT mode)",
+                       variable=var, command=toggle, bg=self.th["bg"], fg=self.th["text"],
+                       selectcolor=self.th["entry"], activebackground=self.th["bg"],
+                       activeforeground=self.th["text"], font=("Segoe UI", 10, "bold"),
+                       anchor="w").pack(fill="x", padx=10, pady=(6, 0))
+        tk.Label(parent, text="Uses the Bounce Push BepInEx plugin. Saved right away; restart "
+                              "the game if it is running. The sliders below also tune GOAT mode.",
+                 bg=self.th["bg"], fg=self.th["muted"], font=("Segoe UI", 8),
+                 anchor="w", justify="left").pack(fill="x", padx=30, pady=(0, 4))
 
     def _slider_row(self, parent, sid, spec):
         row = ttk.Frame(parent, style="Sld.TFrame")

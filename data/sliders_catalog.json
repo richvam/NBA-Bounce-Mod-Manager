@@ -6,6 +6,7 @@
   "Shooting",
   "Passing",
   "Defense",
+  "Push",
   "Rebounding",
   "Movement",
   "Awareness",
@@ -408,28 +409,36 @@
   },
   "cpu_push_success": {
    "label": "CPU Push Success",
-   "category": "Defense",
+   "category": "Push",
    "side": "CPU",
-   "description": "Chance a CPU push knocks you off balance, plus the cooldown between pushes. Read by PlayerPush.getSuccessRate.",
+   "description": "Chance a CPU push knocks you over once it is in range. Multiplies PlayerPush.getSuccessRate for CPU players only. In normal Bounce matches this needs the Bounce Push plugin (checkbox above).",
    "fields": [
     {
      "role": "tiers",
      "path": "m_fPushSucessProbability",
      "clamp": [
       0.0,
-      60.0
+      1.0
      ],
      "anchors": {
       "25": 0.6499999761581421,
       "50": 0.8999999761581421,
       "75": 1.0
      }
-    },
+    }
+   ]
+  },
+  "cpu_push_frequency": {
+   "label": "CPU Push Frequency",
+   "category": "Push",
+   "side": "CPU",
+   "description": "Minimum and maximum delay before a CPU player will try another push. Higher = shorter cooldown = the CPU shoves more often.",
+   "fields": [
     {
      "role": "tiers",
      "path": "m_v2PushCooldown",
      "clamp": [
-      0.0,
+      0.25,
       60.0
      ],
      "anchors": {
@@ -904,7 +913,7 @@
   },
   "user_push_frequency": {
    "label": "User Push Frequency",
-   "category": "Defense",
+   "category": "Push",
    "side": "User",
    "description": "Cooldown before another push attempt on your side. NOTE: only AI decision code reads this cooldown, so it governs assisted attempts rather than gating your own button presses.",
    "fields": [
@@ -1150,6 +1159,24 @@
      "clamp": [
       0.05,
       2.0
+     ]
+    }
+   ]
+  },
+  "push_reach": {
+   "label": "Push Reach",
+   "category": "Push",
+   "side": "Both",
+   "description": "How far away a push can still connect (PlayerStats.m_fPushMaxDistance, 1.8 in stock). Your own push success is decided by distance and angle, so this is the main lever for your side. Affects BOTH teams.",
+   "fields": [
+    {
+     "role": "playerstats",
+     "path": "m_fPushMaxDistance",
+     "at0": 0.8999999761581421,
+     "at100": 2.6999999284744263,
+     "clamp": [
+      0.5,
+      5.0
      ]
     }
    ]

@@ -98,7 +98,7 @@ import game_layout
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 APP_NAME       = "NBA Bounce Mod Manager"
-APP_VERSION    = "4.0.0"
+APP_VERSION    = "4.1.0"
 CONFIG_FILE    = app_paths.user("config.json")
 MODS_META_FILE = "mods.json"
 BACKUP_SUFFIX  = ".original_backup"
