@@ -5,7 +5,9 @@ using BepInEx; using BepInEx.Configuration; using HarmonyLib; using UnityEngine.
 // PlayerEntity.toPush also requires isMainModeGoat(), and the AI's Statement_CanSuccedPush refuses in Bounce mode.
 // Each check is wrapped so it reports "not Bounce" / "is GOAT" while EnableInBounceMode is on. Practice still
 // sets m_bDisablePush itself, so the tutorials are unchanged.
-[BepInPlugin("richvam.bounce.push","Bounce Push","1.0.0")]
+// Pushes are also counted as an award stat (PUSH), but Bounce mode's award table has no PUSH entry, so the end-of-match
+// awards threw KeyNotFoundException and left the end screen without buttons; stats missing from the table now score 0.
+[BepInPlugin("richvam.bounce.push","Bounce Push","1.0.1")]
 public class BouncePush : BaseUnityPlugin {
   static BepInEx.Logging.ManualLogSource L; static ConfigEntry<bool> Enabled;
   void Awake(){ L=Logger;
@@ -14,7 +16,14 @@ public class BouncePush : BaseUnityPlugin {
     var h=new Harmony("richvam.bounce.push");
     TryPatch(h,"bounce.GameplayManager","initializeMode","isMainModeBounce","NotBounce");
     TryPatch(h,"bounce.Statement_CanSuccedPush","onEvaluate","isMainModeBounce","NotBounce");
-    TryPatch(h,"bounce.PlayerEntity","toPush","isMainModeGoat","AsGoat"); }
+    TryPatch(h,"bounce.PlayerEntity","toPush","isMainModeGoat","AsGoat");
+    try{ h.Patch(AccessTools.Method(AccessTools.TypeByName("bounce.AwardsManager"),"getAwardScore"),
+        new HarmonyMethod(typeof(BouncePush).GetMethod("AwardPre",BindingFlags.Static|BindingFlags.NonPublic))); L.LogInfo("Patched bounce.AwardsManager.getAwardScore");
+    }catch(Exception e){L.LogError("Patch bounce.AwardsManager.getAwardScore failed: "+e.Message);} }
+  static System.Collections.IDictionary awards; static object awardsOwner;
+  static bool AwardPre(object __instance,object _eStat,ref float __result){
+    if(awardsOwner!=__instance){ awardsOwner=__instance; awards=AccessTools.Field(__instance.GetType(),"m_dAwards").GetValue(__instance) as System.Collections.IDictionary; }
+    if(awards==null||awards.Contains(_eStat)) return true; __result=0f; return false; }
   static string Want, Filter;
   static void TryPatch(Harmony h,string type,string method,string call,string filter){ try{
       var m=AccessTools.Method(AccessTools.TypeByName(type),method); Want=call; Filter=filter;

@@ -23,6 +23,7 @@
 | Floor Patterns | Give any team's court a different wood-grain pattern, including retro/throwback variants |
 | Gameplay Sliders | Tune CPU skill, shot windows, movement, and more, with 2K-style difficulty presets |
 | Camera | **New in v3.2:** pick a match camera (Default, Broadcast, 2K Drive, 2K Half-Court, Classic Live Iso, Zoom, Close-Up, Overhead), fine-tune it with sliders, and share presets as `.bouncecam` files. One click always reverts to the original camera |
+| Season Stats | **New in v4.2:** box scores, league leaders, player and team season stats and game logs for every player, custom players included, built into the game's own menus (part of the optional loader) |
 | Court Colors | Recolor each team's floor and court lines (sidelines, key, three-point arc, and more) |
 | Saves | Unlock mascots, jerseys, logos, balls and trails by editing your save file |
 | Teams | **New in v3.1:** add brand-new custom teams to the game, rename and recolor any team, borrow logos/jerseys/courts, and rearrange the team-select grid |
@@ -219,8 +220,8 @@ Close the game before applying. It reads the camera once at startup. The intro, 
 ## Roster, Avatar and Accessory (optional BepInEx loader)
 
 These three tabs need the optional **BepInEx 5 loader**. Install it from the
-Roster tab with **Install Loader**. It adds three plugins: BounceRatings,
-BounceRoster and BounceJersey. They read CSVs in `BepInEx\config\`, and no
+Roster tab with **Install Loader**. It adds the BounceRatings, BounceRoster,
+BounceJersey, BouncePush and BounceStats plugins. They read CSVs in `BepInEx\config\`, and no
 game data file is touched.
 
 - **Roster:** add custom players to any team as starters, bench or legends.
@@ -238,6 +239,43 @@ Antivirus tools sometimes flag BepInEx's `winhttp.dll` (a false positive).
 **Uninstall Loader** removes it completely; the CSVs are backed up to
 `user/ratings_backup/`. Look limits: 5 human skin tones, no facial hair or
 headband, about 24 hair styles, male rig only in the preview.
+
+## Season Stats (in game, part of the loader)
+
+The **BounceStats** plugin installs with the other loader plugins. It tracks
+every player's stats in Season mode, including your custom roster players,
+and shows them in the game's own menus, styled like the standings table.
+
+**Season screen.** Four pages are added after the game's own Season Info
+pages (Q/E or the bumpers to page through):
+
+| Page | Shows |
+|---|---|
+| Leaders | Top 5 per game in points, rebounds, assists, steals, blocks and field goal percentage |
+| Players | Every player's season averages. Up/Down picks a player, Left/Right changes the sort column |
+| Game Log | Every game of the player picked on the Players page. Up/Down scrolls |
+| Teams | One team's record, its players' averages and a team row. Left/Right changes team |
+
+**Box Score button.** The pause menu gets a Box Score button for the game on
+court, and the end-of-match screen gets one for the final. After a season
+game the final box score opens by itself. Esc or B closes it.
+
+Stats are PTS, REB, AST, STL, BLK, FGM-A, FG %, 3PM-A, 3P % and dunks.
+
+- **Played games** are counted live for all six players. The game's own
+  stats only cover human-controlled players, so the plugin counts every shot,
+  make, pass, rebound, block and steal itself. An assist is a pass to the
+  scorer within 5 seconds with nobody else touching the ball. A rebound is
+  the first player to gain the ball after a missed shot.
+- **Simulated games** (your Simulate button, and CPU vs CPU regular season,
+  play-in, in-season tournament and playoff games) get stat lines built from
+  the final score and each player's 1-10 ratings in the Roster tab. They are
+  marked `*` in game logs. The game simulates every score as 80-149 points,
+  so simulated lines run far higher than games played with short quarters.
+- Stats are saved per season slot in `BepInEx\config\BounceStats\slot<N>.json`
+  and cleared when the slot is deleted or a new season replaces it.
+- Settings are in `BepInEx\config\richvam.bounce.stats.cfg`: auto-opening the
+  box score after season games, and simulated stat lines.
 
 ## Court Colors
 

@@ -51,9 +51,9 @@ ID_BY_TEAM = {n: i for i, n in TEAM_BY_ID.items()}
 
 # ----------------------------------------------------------------- loader
 class RosterLoader(rm.Loader):
-    """The ratings Loader plus the BounceRoster, BounceJersey and BouncePush plugins (all dlls ship in loader/).
+    """The ratings Loader plus the BounceRoster, BounceJersey, BouncePush and BounceStats plugins (all dlls ship in loader/).
     BouncePush ships switched off; the Gameplay Sliders tab turns it on."""
-    EXTRA_DLLS = ("BounceRoster.dll", "BounceJersey.dll", "BouncePush.dll")
+    EXTRA_DLLS = ("BounceRoster.dll", "BounceJersey.dll", "BouncePush.dll", "BounceStats.dll")
 
     def __init__(self, root):
         super().__init__(root)

@@ -1,5 +1,28 @@
 # Changelog
 
+## v4.2.0
+
+### What's New
+
+- **Season stats in game, for every player.** A new loader plugin,
+  BounceStats, tracks points, rebounds, assists, steals, blocks, FG and 3PT
+  makes and attempts, and dunks for all six players in Season games, custom
+  roster players included. They live in the game's own menus: Leaders,
+  Players, Game Log and Teams pages join the season screen's Season Info
+  pages, and a Box Score button is added to the pause menu and the
+  end-of-match screen. The final box score opens by itself after each season
+  game.
+- **Simulated games get stat lines too.** Games you simulate, and every CPU
+  vs CPU game, get lines built from the final score and the players' ratings,
+  so the leaders cover the whole league.
+
+### Fixes
+
+- With shoving on in Bounce matches, a match where anyone shoved ended on a
+  broken end screen: no awards, no buttons, and in Season mode the result was
+  never saved. The game counts pushes as an award stat that Bounce mode's award
+  list doesn't have; Bounce Push 1.0.1 scores it as zero.
+
 ## v4.1.0
 
 ### What's New
